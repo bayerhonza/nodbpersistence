@@ -1,13 +1,17 @@
 
 import cz.fit.persistence.core.PersistenceManagerImpl;
-import cz.fit.persistence.core.Test1;
 
 public class Main {
 
-    public static void main(String[] args) {
-        Test1 test = null;
+    private static final String DIR_PATH = "D:\\Documents\\FIT\\3BIT\\IBP\\test_dir";
+    /*aasdfasdf*/
 
-        PersistenceManagerImpl pm = new PersistenceManagerImpl("/",null);
+    public static void main(String[] args) {
+        Test1 test = new Test1();
+        test.setNumber(1);
+        test.setText("hello");
+
+        PersistenceManagerImpl pm = new PersistenceManagerImpl(DIR_PATH,null);
         try{
             pm.persist(test);
         } catch (Exception e) {

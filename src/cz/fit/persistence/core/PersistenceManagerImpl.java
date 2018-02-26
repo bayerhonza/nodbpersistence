@@ -3,24 +3,27 @@ package cz.fit.persistence.core;
 
 import cz.fit.persistence.hash.HashHelper;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.util.Arrays;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.Objects;
+
 
 public class PersistenceManagerImpl {
 
     private PersistenceConfiguration config;
 
-    private HashMap<Integer,ClassHashMap> hashMap;
+    private HashMap<Integer,ClassPersist> hashMap;
 
     public PersistenceManagerImpl(String path, CompilationMethod ZIPmethod) {
         config = new PersistenceConfiguration(path,ZIPmethod);
         hashMap = new HashMap<>();
+
+
     }
 
-    public PersistenceManagerImpl(String path) {
+    PersistenceManagerImpl(String path) {
         config = new PersistenceConfiguration(path);
     }
 
@@ -29,22 +32,27 @@ public class PersistenceManagerImpl {
             throw new NullPointerException();
         }
         Integer obClassHashCode = HashHelper.getHashFromClass(ob.getClass());
+        ClassPersist classPersist;
         if (hashMap.containsKey(obClassHashCode)) {
-            ClassHashMap classHashMap = hashMap.get(obClassHashCode);
-            persistKnownClass(ob,classHashMap);
+            classPersist = hashMap.get(obClassHashCode);
+        } else {
+            classPersist = new ClassPersist(ob.getClass());
+            hashMap.put(obClassHashCode, classPersist);
         }
-        Class<?> klass = ob.getClass();
-        Constructor<?>[] publicConstructors = klass.getConstructors();
-        Field[] publicFields = ob.getClass().getFields();
-
-        System.out.println(Arrays.toString(publicConstructors));
-        System.out.println(klass.getCanonicalName());
-        System.out.println(Arrays.toString(publicFields));
+        persistKnownClass(ob, classPersist);
 
     }
 
-    private void persistKnownClass(Object ob, ClassHashMap classHashMap) {
-        System.out.println(classHashMap.toString());
+    private void persistKnownClass(Object ob, ClassPersist classPersist) throws IOException {
+        Path klassPath = Paths.get(config.getPath());
+        if (!Files.exists(klassPath)) {
+            Files.createDirectories(klassPath);
+        }
+
+
+
+
+
 
     }
 

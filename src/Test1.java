@@ -1,14 +1,13 @@
-package cz.fit.persistence.core;
-
-
 import cz.fit.persistence.annotations.ID;
 import cz.fit.persistence.annotations.TestAnnotation;
 
 public class Test1 {
+
     @ID
     Integer persistenceID;
 
     private String text;
+
     private int number;
 
     public Test1() {

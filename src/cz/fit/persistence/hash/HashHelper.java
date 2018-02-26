@@ -6,7 +6,6 @@ public class HashHelper {
         if (klass == null) {
             return null;
         }
-        String canonicalName = klass.getCanonicalName();
-        return canonicalName.hashCode();
+        return klass.getCanonicalName().hashCode();
     }
 }
