@@ -1,6 +1,7 @@
 package cz.fit.persistence.core;
 
 
+import cz.fit.persistence.core.storage.StorageContext;
 import cz.fit.persistence.hash.HashHelper;
 
 import java.io.IOException;
@@ -13,6 +14,8 @@ import java.util.HashMap;
 public class PersistenceManagerImpl {
 
     private PersistenceConfiguration config;
+
+    private StorageContext storageContext;
 
     private HashMap<Integer,ClassPersist> hashMap;
 
