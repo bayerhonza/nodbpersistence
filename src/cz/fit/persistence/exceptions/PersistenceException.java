@@ -2,7 +2,7 @@ package cz.fit.persistence.exceptions;
 
 import cz.fit.persistence.core.PersistenceContext;
 
-public class PersistenceException extends RuntimeException {
+public class PersistenceException extends RuntimeException implements Throwable {
 
     public PersistenceException(String msg) {
         super(msg);

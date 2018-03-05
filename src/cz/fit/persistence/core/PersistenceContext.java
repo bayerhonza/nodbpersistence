@@ -23,6 +23,8 @@ public class PersistenceContext {
     }
 
     public void init() {
+
+
         listeners = new HashMap<>();
         storageContext = new StorageContext();
         classClassManagerMap = new HashMap<>();

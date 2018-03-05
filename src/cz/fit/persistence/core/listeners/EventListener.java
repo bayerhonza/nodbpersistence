@@ -9,4 +9,8 @@ import cz.fit.persistence.exceptions.PersistenceException;
 public interface EventListener {
 
     void onPersist(EntityEvent event) throws PersistenceException;
+
+    void onUpdate(EntityEvent event) throws PersistenceException;
+
+    void onDelete(EntityEvent event) throws PersistenceException;
 }

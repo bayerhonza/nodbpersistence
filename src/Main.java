@@ -7,6 +7,7 @@ public class Main {
     /*aasdfasdf*/
 
     public static void main(String[] args) {
+
         Test1 test = new Test1();
         test.setNumber(1);
         test.setText("hello");
