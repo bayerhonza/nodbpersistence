@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<nodbpersistence>
-    <property name="rootDirectory" value="D:\Documents\FIT\3BIT\IBP\persisted_objects"/>
-    <property name="cachePoolSize" value="100"/>
-</nodbpersistence>

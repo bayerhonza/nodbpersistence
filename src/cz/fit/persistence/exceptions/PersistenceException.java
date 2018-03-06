@@ -2,7 +2,7 @@ package cz.fit.persistence.exceptions;
 
 import cz.fit.persistence.core.PersistenceContext;
 
-public class PersistenceException extends RuntimeException implements Throwable {
+public class PersistenceException extends RuntimeException {
 
     public PersistenceException(String msg) {
         super(msg);
@@ -12,7 +12,7 @@ public class PersistenceException extends RuntimeException implements Throwable 
         super(ex);
     }
 
-    public PersistenceException(Throwable ex, String msg) {
+    public PersistenceException(String msg,Throwable ex) {
         super(msg,ex);
     }
 }

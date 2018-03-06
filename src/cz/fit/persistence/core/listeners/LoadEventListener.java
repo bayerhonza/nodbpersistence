@@ -3,10 +3,10 @@ package cz.fit.persistence.core.listeners;
 import cz.fit.persistence.core.events.EntityEvent;
 import cz.fit.persistence.exceptions.PersistenceException;
 
-/**
- * Listener for events coming from persistence
- */
-public interface EventListener {
+public class LoadEventListener implements EventListener {
 
-    void doAction(EntityEvent event) throws PersistenceException;
+    @Override
+    public void doAction(EntityEvent event) throws PersistenceException {
+
+    }
 }
