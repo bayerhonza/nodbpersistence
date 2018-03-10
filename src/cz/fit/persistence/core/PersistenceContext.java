@@ -1,7 +1,9 @@
 package cz.fit.persistence.core;
 
 import cz.fit.persistence.core.events.EntityEvent;
+import cz.fit.persistence.core.events.EntityEventType;
 import cz.fit.persistence.core.klass.manager.ClassManager;
+import cz.fit.persistence.core.listeners.EventListener;
 import cz.fit.persistence.core.storage.StorageContext;
 import cz.fit.persistence.exceptions.PersistenceException;
 
@@ -9,7 +11,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Paths;
-import java.util.EventListener;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -26,7 +27,7 @@ public class PersistenceContext {
 
     private Properties properties;
 
-    private Map<Class<EntityEvent>, EventListener> listeners;
+    private Map<EntityEventType, EventListener> listeners;
     private StorageContext storageContext;
     private Map<Class<?>, ClassManager> classClassManagerMap;
 
@@ -52,7 +53,10 @@ public class PersistenceContext {
         }
         listeners = new HashMap<>();
         classClassManagerMap = new HashMap<>();
+    }
 
+    public cz.fit.persistence.core.listeners.EventListener getListenerToEvent(EntityEvent event) {
+        return listeners.get(event.TYPE);
 
     }
 
