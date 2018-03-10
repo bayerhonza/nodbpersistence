@@ -6,6 +6,6 @@ import cz.fit.persistence.exceptions.PersistenceException;
 public class Bootstrap {
 
     public static PersistenceContext initPersistence() throws PersistenceException {
-       return new PersistenceContext();
+        return null;
     }
 }

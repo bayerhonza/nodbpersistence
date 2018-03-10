@@ -10,7 +10,7 @@ public class Test1 {
 
     private int number;
 
-    public Test1() {
+    Test1() {
         System.out.println("tvorim");
     }
 
@@ -18,13 +18,14 @@ public class Test1 {
         return number;
     }
 
-    public void setNumber(int number) {
+    public Test1 setNumber(int number) {
         this.number = number;
+        return this;
     }
 
-    public void setText(String text) {
-
+    public Test1 setText(String text) {
         this.text = text;
+        return this;
     }
 
     @TestAnnotation(value = "test")

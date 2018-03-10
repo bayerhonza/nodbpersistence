@@ -10,9 +10,10 @@ public class PersistEventListenerImpl implements EventListener{
     @Override
     public void doAction(EntityEvent event) throws PersistenceException {
         if(event instanceof PersistEntityEvent) {
-            /**
+            /*
              * launch persisting process
              */
+            System.out.println("hello");
         }
         else {
             throw new PersistenceException("Bad event for this listener.");

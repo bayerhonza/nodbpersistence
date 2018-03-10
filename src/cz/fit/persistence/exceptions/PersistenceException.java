@@ -1,7 +1,5 @@
 package cz.fit.persistence.exceptions;
 
-import cz.fit.persistence.core.PersistenceContext;
-
 public class PersistenceException extends RuntimeException {
 
     public PersistenceException(String msg) {

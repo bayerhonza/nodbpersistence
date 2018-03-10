@@ -1,9 +1,7 @@
 package cz.fit.persistence.core;
 
 import cz.fit.persistence.core.events.EntityEvent;
-import cz.fit.persistence.core.events.PersistEntityEvent;
 import cz.fit.persistence.core.klass.manager.ClassManager;
-import cz.fit.persistence.core.listeners.PersistEventListenerImpl;
 import cz.fit.persistence.core.storage.StorageContext;
 import cz.fit.persistence.exceptions.PersistenceException;
 
@@ -21,7 +19,10 @@ public class PersistenceContext {
     /**
      * Default path to XML config file
      */
-    private final String PATH_TO_CONFIG = "./resources/persistence-nodb.xml";
+    private static final String PATH_TO_CONFIG = "./resources/persistence-nodb.xml";
+
+    public static final String ROOT_DIRECTORY_PROP = "rootDirectory";
+    public static final String CACHE_SIZE_PROP = "cacheSize";
 
     private Properties properties;
 
@@ -29,20 +30,33 @@ public class PersistenceContext {
     private StorageContext storageContext;
     private Map<Class<?>, ClassManager> classClassManagerMap;
 
-    private PersistenceManagerFactory pmf;
+    /**
+     * Constructor for PersistenceContext without predefined properties
+     */
+    PersistenceContext() {
+        this(null);
 
-    public PersistenceContext() throws PersistenceException {
-        properties = new Properties();
-        listeners = new HashMap<>();
-        storageContext = new StorageContext();
-        classClassManagerMap = new HashMap<>();
-        pmf = new PersistenceManagerFactory();
-
-
-        init();
     }
 
-    private void init() throws PersistenceException {
+    /**
+     * Constructor for PersistenceContext with predefinde properties created by {@link PersistenceSettings}
+     *
+     * @param properties predefined properties
+     * @throws PersistenceException if IO error occurs while processing XML properties file
+     */
+    PersistenceContext(Properties properties) throws PersistenceException {
+        if (properties == null) {
+            loadXMLProperties();
+        } else {
+            this.properties = properties;
+        }
+        listeners = new HashMap<>();
+        classClassManagerMap = new HashMap<>();
+
+
+    }
+
+    private void loadXMLProperties() throws PersistenceException {
         try {
             InputStream inputStream = new FileInputStream(Paths.get(PATH_TO_CONFIG).toFile());
             properties.loadFromXML(inputStream);
@@ -50,24 +64,18 @@ public class PersistenceContext {
             throw new PersistenceException("Error while processing XML config file",ex);
         }
 
+        storageContext = new StorageContext();
+
+    }
+
+    private void init() {
+
     }
 
     private void registerListeners() {
-        /**
+        /*
          * register listeners
          */
 
-    }
-
-    public PersistenceManagerFactory getPmf() {
-        return pmf;
-    }
-
-    public void setProperties(Properties properties) {
-        this.properties = properties;
-    }
-
-    public void addToProperties(String entry, String value) {
-        properties.put(entry, value);
     }
 }

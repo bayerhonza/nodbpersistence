@@ -2,21 +2,15 @@ package cz.fit.persistence.core;
 
 public class PersistenceManagerFactory {
 
-    private static PersistenceManagerFactory pmfactory = null;
+    private PersistenceContext context;
 
-    protected PersistenceManagerFactory() {
-
+    PersistenceManagerFactory(PersistenceContext persistenceContext) {
+        this.context = persistenceContext;
     }
 
-    public static PersistenceManagerFactory getInstance() {
-        if (pmfactory == null) {
-            pmfactory = new PersistenceManagerFactory();
-        }
-        return pmfactory;
+    public PersistenceManager getPersistenceManager() {
+        //TODO implement persistence manager
+        return new PersistenceManagerImpl();
     }
 
-
-    public PersistenceManagerImpl getPersistenceManager() {
-        return new PersistenceManagerImpl("/");
-    }
 }
