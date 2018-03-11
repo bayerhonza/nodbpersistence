@@ -1,8 +1,10 @@
 package cz.fit.persistence.core;
 
 
+import cz.fit.persistence.core.events.EntityEvent;
+import cz.fit.persistence.core.events.EntityEventType;
 import cz.fit.persistence.core.events.PersistEntityEvent;
-import cz.fit.persistence.core.listeners.EventListener;
+import cz.fit.persistence.core.listeners.PersistEventListener;
 import cz.fit.persistence.exceptions.PersistenceException;
 
 
@@ -16,7 +18,7 @@ public class PersistenceManagerImpl implements PersistenceManager {
 
     @Override
     public void persist(Object ob) throws PersistenceException {
-        launchPersistAction(new PersistEntityEvent(ob));
+        launchPersistAction(new PersistEntityEvent(ob, this));
     }
 
     @Override
@@ -30,7 +32,7 @@ public class PersistenceManagerImpl implements PersistenceManager {
     }
 
     private void launchPersistAction(PersistEntityEvent event) throws PersistenceException {
-        EventListener eventListener = getPersistenceContext().getListenerToEvent(event);
+        PersistEventListener persistEventListener = getPersistenceContext().getListenerToEvent(EntityEventType.PERSIST_EVENT);
     }
 
     private PersistenceContext getPersistenceContext() {

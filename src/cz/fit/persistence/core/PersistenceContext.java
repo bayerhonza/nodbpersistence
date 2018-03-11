@@ -4,6 +4,7 @@ import cz.fit.persistence.core.events.EntityEvent;
 import cz.fit.persistence.core.events.EntityEventType;
 import cz.fit.persistence.core.klass.manager.ClassManager;
 import cz.fit.persistence.core.listeners.EventListener;
+import cz.fit.persistence.core.listeners.PersistEventListener;
 import cz.fit.persistence.core.storage.StorageContext;
 import cz.fit.persistence.exceptions.PersistenceException;
 
@@ -55,8 +56,8 @@ public class PersistenceContext {
         classClassManagerMap = new HashMap<>();
     }
 
-    public cz.fit.persistence.core.listeners.EventListener getListenerToEvent(EntityEvent event) {
-        return listeners.get(event.TYPE);
+    public EventListener getListenerToEvent(EntityEvent eventType) {
+        return listeners.get(eventType);
 
     }
 
@@ -72,7 +73,8 @@ public class PersistenceContext {
 
     }
 
-    private void init() {
+    public void init() {
+        listeners.put(EntityEventType.PERSIST_EVENT, new PersistEventListener());
 
     }
 
