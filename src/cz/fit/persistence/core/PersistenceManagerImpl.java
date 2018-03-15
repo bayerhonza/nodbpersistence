@@ -1,9 +1,8 @@
 package cz.fit.persistence.core;
 
 
-import cz.fit.persistence.core.events.EntityEvent;
-import cz.fit.persistence.core.events.EntityEventType;
 import cz.fit.persistence.core.events.PersistEntityEvent;
+import cz.fit.persistence.core.listeners.EventListener;
 import cz.fit.persistence.core.listeners.PersistEventListener;
 import cz.fit.persistence.exceptions.PersistenceException;
 
@@ -31,8 +30,14 @@ public class PersistenceManagerImpl implements PersistenceManager {
 
     }
 
+    @Override
+    public PersistenceContext getContext() {
+        return pmfactory.getContext();
+    }
+
     private void launchPersistAction(PersistEntityEvent event) throws PersistenceException {
-        PersistEventListener persistEventListener = getPersistenceContext().getListenerToEvent(EntityEventType.PERSIST_EVENT);
+        EventListener eventListener = (PersistEventListener) getPersistenceContext().getListenerToEvent(event);
+        eventListener.doAction(event);
     }
 
     private PersistenceContext getPersistenceContext() {

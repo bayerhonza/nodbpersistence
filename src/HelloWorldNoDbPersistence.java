@@ -3,6 +3,7 @@ import cz.fit.persistence.core.PersistenceManager;
 import cz.fit.persistence.core.PersistenceManagerFactory;
 import cz.fit.persistence.core.PersistenceManagerFactoryBuilder;
 import cz.fit.persistence.core.PersistenceSettings;
+import cz.fit.persistence.exceptions.PersistenceCoreException;
 
 public class HelloWorldNoDbPersistence {
 
@@ -14,9 +15,14 @@ public class HelloWorldNoDbPersistence {
         persistenceContextSetting
                 .setRootPath("D:\\Documents\\FIT\\3BIT\\IBP\\persisted_objects")
                 .setCache(100);
-
-        PersistenceManagerFactoryBuilder builder = new PersistenceManagerFactoryBuilder(persistenceContextSetting);
-        PersistenceManagerFactory persistenceManagerFactory = builder.buildPersistenceManagerFactory();
+        PersistenceManagerFactory persistenceManagerFactory;
+        try {
+            PersistenceManagerFactoryBuilder builder = new PersistenceManagerFactoryBuilder(persistenceContextSetting);
+            persistenceManagerFactory = builder.buildPersistenceManagerFactory();
+        } catch (PersistenceCoreException ex) {
+            ex.printStackTrace();
+            return;
+        }
 
         PersistenceManager pm = persistenceManagerFactory.getPersistenceManager();
 

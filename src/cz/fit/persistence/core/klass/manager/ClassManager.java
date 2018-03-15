@@ -1,12 +1,14 @@
 package cz.fit.persistence.core.klass.manager;
 
-import cz.fit.persistence.core.events.EntityEvent;
+import cz.fit.persistence.core.events.AbstractEntityEvent;
 
-public interface ClassManager {
+public interface ClassManager<T> {
 
-    void performPersist(EntityEvent event);
+    String getClassName();
 
-    void performUpdate(EntityEvent event);
+    void performPersist(AbstractEntityEvent event);
 
-    void performDelete(EntityEvent event);
+    void performUpdate(AbstractEntityEvent event);
+
+    void performDelete(AbstractEntityEvent event);
 }

@@ -1,11 +1,16 @@
 package cz.fit.persistence.core.events;
 
-public class UpdateEntityEvent extends EntityEvent {
+import cz.fit.persistence.core.PersistenceManager;
 
-    public EntityEventType TYPE = EntityEventType.UPDATE_EVENT;
+public class UpdateEntityEvent extends AbstractEntityEvent<UpdateEntityEvent> {
 
-    public UpdateEntityEvent(Object object, EventSource eventSource) {
 
-        super(object, eventSource);
+    public UpdateEntityEvent(Object object, PersistenceManager persistenceManager) {
+        super(object, persistenceManager);
+    }
+
+    @Override
+    public UpdateEntityEvent getEvent() {
+        return this;
     }
 }

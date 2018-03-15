@@ -1,9 +1,12 @@
 package cz.fit.persistence.core.listeners;
 
-import cz.fit.persistence.core.events.EntityEvent;
+import cz.fit.persistence.core.events.AbstractEntityEvent;
 import cz.fit.persistence.exceptions.PersistenceException;
 
-public interface EventListener<T> {
+public interface EventListener {
 
-    void doAction(EntityEvent event) throws PersistenceException;
+    void doAction(AbstractEntityEvent event) throws PersistenceException;
+
 }
+
+

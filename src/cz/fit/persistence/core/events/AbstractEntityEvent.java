@@ -2,16 +2,17 @@ package cz.fit.persistence.core.events;
 
 import cz.fit.persistence.core.PersistenceManager;
 
-public abstract class EntityEvent {
+public abstract class AbstractEntityEvent<T> {
 
     private Object object;
     private PersistenceManager source;
-    public EntityEventType TYPE = EntityEventType.DEFAULT_EVENT;
 
-    EntityEvent(Object object, PersistenceManager source) {
+    AbstractEntityEvent(Object object, PersistenceManager source) {
         this.object = object;
         this.source = source;
     }
+
+    public abstract T getEvent();
 
     public Object getObject() {
         return object;

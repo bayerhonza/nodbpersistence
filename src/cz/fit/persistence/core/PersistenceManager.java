@@ -10,4 +10,6 @@ public interface PersistenceManager {
 
     void find(Object object) throws PersistenceException;
 
+    PersistenceContext getContext();
+
 }
