@@ -6,7 +6,7 @@ public class UpdateEntityEvent extends AbstractEntityEvent<UpdateEntityEvent> {
 
 
     public UpdateEntityEvent(Object object, PersistenceManager persistenceManager) {
-        super(object, persistenceManager);
+        super(object, persistenceManager, EventType.UPDATE);
     }
 
     @Override

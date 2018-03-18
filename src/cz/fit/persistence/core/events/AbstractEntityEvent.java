@@ -6,10 +6,12 @@ public abstract class AbstractEntityEvent<T> {
 
     private Object object;
     private PersistenceManager source;
+    private EventType entityType;
 
-    AbstractEntityEvent(Object object, PersistenceManager source) {
+    AbstractEntityEvent(Object object, PersistenceManager source, EventType type) {
         this.object = object;
         this.source = source;
+        this.entityType = type;
     }
 
     public abstract T getEvent();
@@ -20,6 +22,10 @@ public abstract class AbstractEntityEvent<T> {
 
     public void setObject(Object object) {
         this.object = object;
+    }
+
+    public EventType getEntityType() {
+        return entityType;
     }
 
     public PersistenceManager getSource() {

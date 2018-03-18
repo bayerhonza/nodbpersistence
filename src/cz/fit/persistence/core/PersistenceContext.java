@@ -1,12 +1,8 @@
 package cz.fit.persistence.core;
 
-import cz.fit.persistence.core.events.AbstractEntityEvent;
-import cz.fit.persistence.core.events.LoadEntityEvent;
-import cz.fit.persistence.core.events.PersistEntityEvent;
-import cz.fit.persistence.core.events.UpdateEntityEvent;
-import cz.fit.persistence.core.klass.manager.ClassManager;
+import cz.fit.persistence.core.events.*;
 import cz.fit.persistence.core.klass.manager.DefaultClassManagerImpl;
-import cz.fit.persistence.core.listeners.EventListener;
+import cz.fit.persistence.core.listeners.AbstractEventListener;
 import cz.fit.persistence.core.listeners.LoadEventListener;
 import cz.fit.persistence.core.listeners.PersistEventListener;
 import cz.fit.persistence.core.listeners.UpdateEventListener;
@@ -34,7 +30,7 @@ public class PersistenceContext {
 
     private Properties properties;
 
-    private Map<Class<? extends AbstractEntityEvent>, EventListener> listeners;
+    private RegisteredListeneres listeners;
     private StorageContext storageContext;
     private Map<Class<?>, DefaultClassManagerImpl> classClassManagerMap;
 
@@ -58,12 +54,12 @@ public class PersistenceContext {
         } else {
             this.properties = properties;
         }
-        listeners = new HashMap<>();
+        listeners = new RegisteredListeneres();
         classClassManagerMap = new HashMap<>();
     }
 
-    public EventListener getListenerToEvent(AbstractEntityEvent event) {
-        return listeners.get(event.getClass());
+    public <T extends AbstractEventListener> T getListenerToEvent(EventTypeToListener<T> eventTypeToListener) {
+        return listeners.findListener(eventTypeToListener);
 
     }
 
@@ -84,24 +80,13 @@ public class PersistenceContext {
 
     public <T> DefaultClassManagerImpl<T> findClassManager(T object) {
         if (!classClassManagerMap.containsKey(object.getClass())) {
-            createClassManager(object);
+            createClassManager(object.getClass());
         }
-        return classClassManagerMap.get(object);
+        return null;
     }
 
-    private void registerListeners() {
-        listeners.put(
-                PersistEntityEvent.class,
-                new PersistEventListener()
-        );
-        listeners.put(
-                UpdateEntityEvent.class,
-                new UpdateEventListener()
-        );
-        listeners.put(
-                LoadEntityEvent.class,
-                new LoadEventListener()
-        );
+    private <T> DefaultClassManagerImpl<T> getClassManager(Class<T> persistedClass) {
+        return null;
     }
 
     private void initStorageContext(String rootDirectory) throws PersistenceCoreException {
@@ -109,7 +94,13 @@ public class PersistenceContext {
         storageContext.init();
     }
 
-    private <T> void createClassManager(T object) {
+    private <T> void createClassManager(Class<T> object) {
         classClassManagerMap.put(object.getClass(), new DefaultClassManagerImpl<>(object));
+    }
+
+    private void registerListeners() {
+        listeners.registerListener(PersistEventListener.class, new PersistEventListener());
+        listeners.registerListener(UpdateEventListener.class, new UpdateEventListener());
+        listeners.registerListener(LoadEventListener.class, new LoadEventListener());
     }
 }

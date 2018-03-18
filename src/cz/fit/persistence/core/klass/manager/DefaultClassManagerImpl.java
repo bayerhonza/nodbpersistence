@@ -4,15 +4,19 @@ import cz.fit.persistence.core.events.AbstractEntityEvent;
 
 public class DefaultClassManagerImpl<T> implements ClassManager<T> {
 
-    private T persistedClass;
+    private Class<T> persistedClass;
 
-    public DefaultClassManagerImpl(T persistedKlass) {
+    public DefaultClassManagerImpl(Class<T> persistedKlass) {
         this.persistedClass = persistedKlass;
     }
 
     @Override
     public String getClassName() {
         return persistedClass.getClass().getCanonicalName();
+    }
+
+    public Class<T> getPersistedClass() {
+        return persistedClass;
     }
 
     @Override
