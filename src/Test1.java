@@ -1,18 +1,14 @@
-import cz.fit.persistence.annotations.ID;
-import cz.fit.persistence.annotations.TestAnnotation;
+import cz.fit.persistence.annotations.ObjectId;
+
 
 public class Test1 {
 
-    @ID
-    Integer persistenceID;
+    @ObjectId
+    private int objectId;
 
     private String text;
 
     private int number;
-
-    Test1() {
-        System.out.println("tvorim");
-    }
 
     public int getNumber() {
         return number;
@@ -28,7 +24,6 @@ public class Test1 {
         return this;
     }
 
-    @TestAnnotation(value = "test")
     public String getText() {
         return text;
 

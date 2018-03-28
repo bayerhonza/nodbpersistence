@@ -1,17 +1,18 @@
 package cz.fit.persistence.core.listeners;
 
-import cz.fit.persistence.core.events.AbstractEntityEvent;
 import cz.fit.persistence.core.events.EventType;
 
-public class AbstractEventListener {
+public abstract class AbstractEventListener<T> {
 
-    private EventType handledEventType;
+    private final EventType handledEventType;
 
-    public AbstractEventListener(EventType eventType) {
+    AbstractEventListener(EventType eventType) {
         this.handledEventType = eventType;
     }
 
     public EventType getHandledEventType() {
         return handledEventType;
     }
+
+    public abstract T getEventListener();
 }

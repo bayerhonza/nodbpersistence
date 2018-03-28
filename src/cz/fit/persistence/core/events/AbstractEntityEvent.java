@@ -5,8 +5,8 @@ import cz.fit.persistence.core.PersistenceManager;
 public abstract class AbstractEntityEvent<T> {
 
     private Object object;
-    private PersistenceManager source;
-    private EventType entityType;
+    private final PersistenceManager source;
+    private final EventType entityType;
 
     AbstractEntityEvent(Object object, PersistenceManager source, EventType type) {
         this.object = object;

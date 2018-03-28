@@ -1,30 +1,29 @@
 package cz.fit.persistence.core.storage;
 
-import cz.fit.persistence.core.klass.manager.ClassManager;
+import cz.fit.persistence.core.klass.manager.DefaultClassManagerImpl;
 import cz.fit.persistence.exceptions.PersistenceCoreException;
 
-import javax.xml.transform.stream.StreamResult;
-import java.io.*;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.Map;
 
 public class StorageContext {
 
-    private Path rootDirectory;
-    private boolean asRoot;
+    private final Path rootDirectory;
+    private final boolean asRoot;
 
-    private HashMap<ClassManager, File> classManagerOutputStreamHashMap;
-    private HashMap<ClassManager, File> classManagerInputStreamHashMap;
+    private final Map<DefaultClassManagerImpl, ClassFileHandler> classFileHandlers = new HashMap<>();
 
     public StorageContext(String rootDirectory) {
         this(rootDirectory, false);
     }
 
-    public StorageContext(String rootDirectory, boolean asRoot) {
+    private StorageContext(String rootDirectory, boolean asRoot) {
         this.rootDirectory = Paths.get(rootDirectory);
-        this.asRoot = asRoot;
+        this.asRoot = false;
     }
 
     public void init() throws PersistenceCoreException {
@@ -35,18 +34,12 @@ public class StorageContext {
         }
     }
 
-    public FileOutputStream getOrAddOutputStream(ClassManager classManager) throws PersistenceCoreException {
-        if (!classManagerOutputStreamHashMap.containsKey(classManager)) {
-            registerClassManager(classManager);
+    public ClassFileHandler getClassHandler(DefaultClassManagerImpl classManager) {
+        ClassFileHandler classFileHandler = classFileHandlers.get(classManager);
+        if (classFileHandler == null) {
+            classFileHandler = new ClassFileHandler(Paths.get(rootDirectory.toString() + "/" + classManager.getClassCanonicalName()));
+            classFileHandlers.put(classManager, classFileHandler);
         }
-        try {
-            return new FileOutputStream(classManagerOutputStreamHashMap.get(classManager));
-        } catch (FileNotFoundException e) {
-            throw new PersistenceCoreException(e);
-        }
-    }
-
-    private void registerClassManager(ClassManager classManager) {
-        classManagerOutputStreamHashMap.put(classManager, new File(classManager.getClassName()));
+        return classFileHandler;
     }
 }

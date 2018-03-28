@@ -4,7 +4,7 @@ import cz.fit.persistence.exceptions.PersistenceCoreException;
 
 public class PersistenceManagerFactoryBuilder {
 
-    private PersistenceContext persistenceContext;
+    private final PersistenceContext persistenceContext;
 
     public PersistenceManagerFactoryBuilder(PersistenceSettings persistenceConfiguration) throws PersistenceCoreException {
         this.persistenceContext = new PersistenceContext(persistenceConfiguration);

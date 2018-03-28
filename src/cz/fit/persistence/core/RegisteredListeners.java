@@ -1,17 +1,14 @@
 package cz.fit.persistence.core;
 
-import cz.fit.persistence.core.events.AbstractEntityEvent;
-import cz.fit.persistence.core.events.EventType;
 import cz.fit.persistence.core.events.EventTypeToListener;
 import cz.fit.persistence.core.listeners.AbstractEventListener;
 
-import java.util.EventListener;
 import java.util.HashMap;
 import java.util.Map;
 
-public class RegisteredListeneres {
+class RegisteredListeners {
 
-    private Map<Class<? extends AbstractEventListener>, Object> listeners = new HashMap<>();
+    private final Map<Class<? extends AbstractEventListener>, AbstractEventListener> listeners = new HashMap<>();
 
     public <T extends AbstractEventListener> void registerListener(Class<T> listenerClass, T listener) {
         listeners.put(listenerClass, listener);

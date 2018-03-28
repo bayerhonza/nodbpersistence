@@ -5,7 +5,7 @@ import cz.fit.persistence.core.PersistenceManagerFactoryBuilder;
 import cz.fit.persistence.core.PersistenceSettings;
 import cz.fit.persistence.exceptions.PersistenceCoreException;
 
-public class HelloWorldNoDbPersistence {
+class HelloWorldNoDbPersistence {
 
 
     public static void main(String[] args) {
@@ -30,6 +30,11 @@ public class HelloWorldNoDbPersistence {
         test.setNumber(1000)
                 .setText("hello world");
 
+        Test2 test2 = new Test2();
+        test2.addToList("bbbbb");
+
         pm.persist(test);
+        pm.persist(test2);
+        System.out.println(test2);
     }
 }

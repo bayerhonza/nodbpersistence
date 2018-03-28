@@ -1,7 +1,8 @@
 package cz.fit.persistence.core;
 
-import cz.fit.persistence.core.events.*;
+import cz.fit.persistence.core.events.EventTypeToListener;
 import cz.fit.persistence.core.klass.manager.DefaultClassManagerImpl;
+import cz.fit.persistence.core.klass.manager.IdGenerator;
 import cz.fit.persistence.core.listeners.AbstractEventListener;
 import cz.fit.persistence.core.listeners.LoadEventListener;
 import cz.fit.persistence.core.listeners.PersistEventListener;
@@ -25,14 +26,15 @@ public class PersistenceContext {
      */
     private static final String PATH_TO_CONFIG = "./resources/persistence-nodb.xml";
 
-    public static final String ROOT_DIRECTORY_PROP = "rootDirectory";
+    private static final String ROOT_DIRECTORY_PROP = "rootDirectory";
     public static final String CACHE_SIZE_PROP = "cacheSize";
 
     private Properties properties;
 
-    private RegisteredListeneres listeners;
+    private final RegisteredListeners listeners = new RegisteredListeners();
     private StorageContext storageContext;
-    private Map<Class<?>, DefaultClassManagerImpl> classClassManagerMap;
+    private final Map<Class<?>, DefaultClassManagerImpl> classClassManagerMap = new HashMap<>();
+    private final IdGenerator idGenerator = new IdGenerator();
 
     /**
      * Constructor for PersistenceContext without predefined properties
@@ -54,8 +56,6 @@ public class PersistenceContext {
         } else {
             this.properties = properties;
         }
-        listeners = new RegisteredListeneres();
-        classClassManagerMap = new HashMap<>();
     }
 
     public <T extends AbstractEventListener> T getListenerToEvent(EventTypeToListener<T> eventTypeToListener) {
@@ -76,26 +76,35 @@ public class PersistenceContext {
     public void init() throws PersistenceCoreException {
         registerListeners();
         initStorageContext(properties.getProperty(ROOT_DIRECTORY_PROP));
+
     }
 
-    public <T> DefaultClassManagerImpl<T> findClassManager(T object) {
-        if (!classClassManagerMap.containsKey(object.getClass())) {
-            createClassManager(object.getClass());
+    @SuppressWarnings({"unchecked"})
+    public <T> DefaultClassManagerImpl<T> findClassManager(Class<T> objectClass) {
+        if (!classClassManagerMap.containsKey(objectClass)) {
+            createClassManager(objectClass);
         }
-        return null;
+        return classClassManagerMap.get(objectClass);
     }
 
-    private <T> DefaultClassManagerImpl<T> getClassManager(Class<T> persistedClass) {
-        return null;
+    public StorageContext getStorageContext() {
+        return storageContext;
     }
+
+    public IdGenerator getIdGenerator() {
+        return idGenerator;
+    }
+
 
     private void initStorageContext(String rootDirectory) throws PersistenceCoreException {
         storageContext = new StorageContext(rootDirectory);
         storageContext.init();
     }
 
-    private <T> void createClassManager(Class<T> object) {
-        classClassManagerMap.put(object.getClass(), new DefaultClassManagerImpl<>(object));
+    private <T> void createClassManager(Class<T> objectClass) {
+        DefaultClassManagerImpl<T> classManager = new DefaultClassManagerImpl<>(objectClass, idGenerator);
+        classManager.setFileHandler(storageContext.getClassHandler(classManager));
+        classClassManagerMap.put(objectClass, classManager);
     }
 
     private void registerListeners() {

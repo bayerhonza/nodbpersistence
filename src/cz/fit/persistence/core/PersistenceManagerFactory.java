@@ -2,7 +2,7 @@ package cz.fit.persistence.core;
 
 public class PersistenceManagerFactory {
 
-    private PersistenceContext context;
+    private final PersistenceContext context;
 
     PersistenceManagerFactory(PersistenceContext persistenceContext) {
         this.context = persistenceContext;

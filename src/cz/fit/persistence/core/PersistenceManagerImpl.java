@@ -9,7 +9,7 @@ import cz.fit.persistence.exceptions.PersistenceException;
 
 public class PersistenceManagerImpl implements PersistenceManager {
 
-    private PersistenceManagerFactory pmfactory;
+    private final PersistenceManagerFactory pmfactory;
 
     public PersistenceManagerImpl(PersistenceManagerFactory pmfactory) {
         this.pmfactory = pmfactory;

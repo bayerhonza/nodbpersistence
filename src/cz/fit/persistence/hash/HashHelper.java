@@ -1,6 +1,6 @@
 package cz.fit.persistence.hash;
 
-public class HashHelper {
+class HashHelper {
 
     public static Integer getHashFromClass(Class<?> klass) {
         if (klass == null) {
