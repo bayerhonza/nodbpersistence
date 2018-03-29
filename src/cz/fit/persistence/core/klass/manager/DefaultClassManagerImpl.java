@@ -7,15 +7,21 @@ import cz.fit.persistence.core.events.UpdateEntityEvent;
 import cz.fit.persistence.core.storage.ClassFileHandler;
 import cz.fit.persistence.exceptions.PersistenceException;
 
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBElement;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.namespace.QName;
 import java.lang.reflect.Field;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.HashMap;
 
 public class DefaultClassManagerImpl<T> {
 
     private final Class<T> persistedClass;
-    private HashSet<T> persistedObjects = new HashSet<>();
+    private HashMap<Integer, T> persistedObjects = new HashMap<>();
     private final IdGenerator idGenerator;
+
 
     private ClassFileHandler fileHandler;
 
@@ -44,6 +50,12 @@ public class DefaultClassManagerImpl<T> {
     public void performPersist(PersistEntityEvent persistEvent) {
         Object persistedObject = persistEvent.getObject();
         Integer objectId = getObjectId(persistedObject);
+        if (persistedObjects.containsKey(objectId)) {
+            updateObject(objectId, persistedObject);
+        } else {
+            persistObject(objectId, persistedObject);
+        }
+
     }
 
     public void performUpdate(UpdateEntityEvent event) {
@@ -52,15 +64,36 @@ public class DefaultClassManagerImpl<T> {
     public void performLoad(LoadEntityEvent event) {
     }
 
+    private void launchPersist(PersistEntityEvent persistEvent) {
+
+    }
+
     private boolean isAlreadyPersisted(Object object) {
 
         return true;
     }
 
+    private void updateObject(Integer objectId, Object event) {
+
+    }
+
+    private void persistObject(Integer objectId, Object object) {
+        try {
+            JAXBContext jc = JAXBContext.newInstance(persistedClass);
+
+            Marshaller marshaller = jc.createMarshaller();
+            marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+            JAXBElement<T> rootElement = new JAXBElement<T>(new QName(getClassCanonicalName()), persistedClass, (T) object);
+            marshaller.marshal(rootElement, System.out);
+        } catch (JAXBException e) {
+            e.printStackTrace();
+        }
+
+    }
+
     private Integer getObjectId(Object object) throws PersistenceException {
         try {
             Field objectIdField = Arrays.stream(persistedClass.getDeclaredFields())
-                    .peek(field -> System.out.println("filtered " + field.getName()))
                     .filter(field -> field.isAnnotationPresent(ObjectId.class))
                     .findFirst()
                     .orElseThrow(() -> new PersistenceException("Object ID not found"));

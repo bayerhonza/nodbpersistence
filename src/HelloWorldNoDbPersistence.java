@@ -35,6 +35,6 @@ class HelloWorldNoDbPersistence {
 
         pm.persist(test);
         pm.persist(test2);
-        System.out.println(test2);
+        System.out.println(test2.getList().toString());
     }
 }
