@@ -1,11 +1,8 @@
-package cz.fit.persistence.hash;
+package cz.fit.persistence.core.helpers;
 
-class HashHelper {
+public class HashHelper {
 
     public static Integer getHashFromClass(Class<?> klass) {
-        if (klass == null) {
-            return null;
-        }
         return klass.getCanonicalName().hashCode();
     }
 }

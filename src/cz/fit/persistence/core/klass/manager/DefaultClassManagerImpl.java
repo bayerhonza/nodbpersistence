@@ -4,14 +4,10 @@ import cz.fit.persistence.annotations.ObjectId;
 import cz.fit.persistence.core.events.LoadEntityEvent;
 import cz.fit.persistence.core.events.PersistEntityEvent;
 import cz.fit.persistence.core.events.UpdateEntityEvent;
+import cz.fit.persistence.core.helpers.ReflectionHelper;
 import cz.fit.persistence.core.storage.ClassFileHandler;
 import cz.fit.persistence.exceptions.PersistenceException;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBElement;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.namespace.QName;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -19,16 +15,20 @@ import java.util.HashMap;
 public class DefaultClassManagerImpl<T> {
 
     private final Class<T> persistedClass;
-    private HashMap<Integer, T> persistedObjects = new HashMap<>();
+    private final Integer classHashCode;
+
+
+    private HashMap<Integer, Object> persistedObjects = new HashMap<>();
     private final IdGenerator idGenerator;
 
 
     private ClassFileHandler fileHandler;
 
 
-    public DefaultClassManagerImpl(Class<T> persistedClass, IdGenerator idGenerator) {
+    public DefaultClassManagerImpl(Class<T> persistedClass, Integer classHashCode) {
         this.persistedClass = persistedClass;
-        this.idGenerator = idGenerator;
+        this.idGenerator = new IdGenerator();
+        this.classHashCode = classHashCode;
     }
 
     public String getClassCanonicalName() {
@@ -47,7 +47,7 @@ public class DefaultClassManagerImpl<T> {
         return fileHandler;
     }
 
-    public void performPersist(PersistEntityEvent persistEvent) {
+    public void performPersist(PersistEntityEvent persistEvent) throws PersistenceException {
         Object persistedObject = persistEvent.getObject();
         Integer objectId = getObjectId(persistedObject);
         if (persistedObjects.containsKey(objectId)) {
@@ -77,18 +77,9 @@ public class DefaultClassManagerImpl<T> {
 
     }
 
-    private void persistObject(Integer objectId, Object object) {
-        try {
-            JAXBContext jc = JAXBContext.newInstance(persistedClass);
-
-            Marshaller marshaller = jc.createMarshaller();
-            marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-            JAXBElement<T> rootElement = new JAXBElement<T>(new QName(getClassCanonicalName()), persistedClass, (T) object);
-            marshaller.marshal(rootElement, System.out);
-        } catch (JAXBException e) {
-            e.printStackTrace();
-        }
-
+    private void persistObject(Integer objectId, Object object) throws PersistenceException {
+        Object deepCopy = ReflectionHelper.deepCopy(object);
+        persistedObjects.put(objectId, deepCopy);
     }
 
     private Integer getObjectId(Object object) throws PersistenceException {
@@ -98,20 +89,26 @@ public class DefaultClassManagerImpl<T> {
                     .findFirst()
                     .orElseThrow(() -> new PersistenceException("Object ID not found"));
 
+            boolean accessibility = objectIdField.canAccess(object);
             objectIdField.setAccessible(true);
             Class<?> fieldType = objectIdField.getType();
             Integer objectIdValue = 0;
             if (fieldType.equals(int.class)) {
 
                 objectIdValue = (int) objectIdField.get(object);
+                if (objectIdValue == 0) {
+                    objectIdValue = null;
+                }
 
             } else if (fieldType.equals(Integer.class)) {
                 objectIdValue = (Integer) objectIdField.get(object);
             }
-            if (objectIdValue == 0) {
-                objectIdField.set(object, idGenerator.getNextId());
+            if (objectIdValue == null) {
+                Integer idNext = idGenerator.getNextId();
+                objectIdField.set(object, idNext);
+                objectIdValue = idNext;
             }
-
+            objectIdField.setAccessible(accessibility);
             return objectIdValue;
         } catch (IllegalAccessException e) {
             throw new PersistenceException(e);

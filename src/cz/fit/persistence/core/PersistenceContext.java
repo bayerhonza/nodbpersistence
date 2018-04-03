@@ -1,8 +1,8 @@
 package cz.fit.persistence.core;
 
 import cz.fit.persistence.core.events.EventTypeToListener;
+import cz.fit.persistence.core.helpers.HashHelper;
 import cz.fit.persistence.core.klass.manager.DefaultClassManagerImpl;
-import cz.fit.persistence.core.klass.manager.IdGenerator;
 import cz.fit.persistence.core.listeners.AbstractEventListener;
 import cz.fit.persistence.core.listeners.LoadEventListener;
 import cz.fit.persistence.core.listeners.PersistEventListener;
@@ -34,7 +34,7 @@ public class PersistenceContext {
     private final RegisteredListeners listeners = new RegisteredListeners();
     private StorageContext storageContext;
     private final Map<Class<?>, DefaultClassManagerImpl> classClassManagerMap = new HashMap<>();
-    private final IdGenerator idGenerator = new IdGenerator();
+    private final Map<Integer, Class<?>> hashClassMap = new HashMap<>();
 
     /**
      * Constructor for PersistenceContext without predefined properties
@@ -68,7 +68,7 @@ public class PersistenceContext {
             InputStream inputStream = new FileInputStream(Paths.get(PATH_TO_CONFIG).toFile());
             properties.loadFromXML(inputStream);
         } catch (IOException ex) {
-            throw new PersistenceException("Error while processing XML config file",ex);
+            throw new PersistenceException("Error while processing XML config file", ex);
         }
 
     }
@@ -91,10 +91,6 @@ public class PersistenceContext {
         return storageContext;
     }
 
-    public IdGenerator getIdGenerator() {
-        return idGenerator;
-    }
-
 
     private void initStorageContext(String rootDirectory) throws PersistenceCoreException {
         storageContext = new StorageContext(rootDirectory);
@@ -102,9 +98,15 @@ public class PersistenceContext {
     }
 
     private <T> void createClassManager(Class<T> objectClass) {
-        DefaultClassManagerImpl<T> classManager = new DefaultClassManagerImpl<>(objectClass, idGenerator);
+        DefaultClassManagerImpl<T> classManager = new DefaultClassManagerImpl<>(objectClass, hashClass(objectClass));
         classManager.setFileHandler(storageContext.getClassHandler(classManager));
         classClassManagerMap.put(objectClass, classManager);
+    }
+
+    private <T> Integer hashClass(Class<T> objectClass) {
+        Integer classHashCode = HashHelper.getHashFromClass(objectClass);
+        hashClassMap.put(classHashCode, objectClass);
+        return classHashCode;
     }
 
     private void registerListeners() {

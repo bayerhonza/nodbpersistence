@@ -27,14 +27,16 @@ class HelloWorldNoDbPersistence {
         PersistenceManager pm = persistenceManagerFactory.getPersistenceManager();
 
         Test1 test = new Test1();
-        test.setNumber(1000)
-                .setText("hello world");
+        test.setNumber(1)
+                .setText("hello");
 
         Test2 test2 = new Test2();
-        test2.addToList("bbbbb");
+        test2.addToList("ahoj");
 
         pm.persist(test);
         pm.persist(test2);
+
+        pm.persist(test);
         System.out.println(test2.getList().toString());
     }
 }
