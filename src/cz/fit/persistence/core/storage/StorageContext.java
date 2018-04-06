@@ -37,7 +37,7 @@ public class StorageContext {
     public ClassFileHandler getClassHandler(DefaultClassManagerImpl classManager) {
         ClassFileHandler classFileHandler = classFileHandlers.get(classManager);
         if (classFileHandler == null) {
-            classFileHandler = new ClassFileHandler(Paths.get(rootDirectory.toString() + "/" + classManager.getClassCanonicalName()));
+            classFileHandler = new ClassFileHandler(Paths.get(rootDirectory.toString() + "/" + classManager.getClassCanonicalName() + ".xml"));
             classFileHandlers.put(classManager, classFileHandler);
         }
         return classFileHandler;

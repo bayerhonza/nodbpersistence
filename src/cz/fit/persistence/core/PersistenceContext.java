@@ -24,10 +24,14 @@ public class PersistenceContext {
     /**
      * Default path to XML config file
      */
-    private static final String PATH_TO_CONFIG = "./resources/persistence-nodb.xml";
+    public static final String PATH_TO_CONFIG = "./resources/persistence-nodb.xml";
 
-    private static final String ROOT_DIRECTORY_PROP = "rootDirectory";
+    public static final String ROOT_DIRECTORY_PROP = "rootDirectory";
     public static final String CACHE_SIZE_PROP = "cacheSize";
+
+    public static final String ROOT_XML_ELEMENT = "persistedClass";
+    public static final String CLASS_ATTRIBUT = "className";
+    public static final String OBJECT_XML_ELEMENT = "persistedObject";
 
     private Properties properties;
 

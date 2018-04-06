@@ -1,4 +1,3 @@
-
 import cz.fit.persistence.core.PersistenceManager;
 import cz.fit.persistence.core.PersistenceManagerFactory;
 import cz.fit.persistence.core.PersistenceManagerFactoryBuilder;
@@ -30,10 +29,15 @@ class HelloWorldNoDbPersistence {
         test.setNumber(1)
                 .setText("hello");
 
+        Test1 test12 = new Test1()
+                .setNumber(2)
+                .setText("asdfasdfasdf");
+
         Test2 test2 = new Test2();
         test2.addToList("ahoj");
 
         pm.persist(test);
+        pm.persist(test12);
         pm.persist(test2);
 
         pm.persist(test);
