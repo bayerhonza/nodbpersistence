@@ -3,17 +3,18 @@ package cz.fit.persistence.core.storage;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.nio.file.Path;
 
 public class ClassFileHandler {
 
-    private final File XMLClassFile;
+    private final File xmlClassFile;
 
     public ClassFileHandler(Path pathToFile) {
-        this.XMLClassFile = pathToFile.toFile();
+        this.xmlClassFile = pathToFile.toFile();
     }
 
-    public FileOutputStream getXMLOutputStream() throws FileNotFoundException {
-        return new FileOutputStream(XMLClassFile);
+    public OutputStream getXMLOutputStream() throws FileNotFoundException {
+        return new FileOutputStream(xmlClassFile);
     }
 }

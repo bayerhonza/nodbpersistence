@@ -29,9 +29,10 @@ public class PersistenceContext {
     public static final String ROOT_DIRECTORY_PROP = "rootDirectory";
     public static final String CACHE_SIZE_PROP = "cacheSize";
 
-    public static final String ROOT_XML_ELEMENT = "persistedClass";
-    public static final String CLASS_ATTRIBUT = "className";
-    public static final String OBJECT_XML_ELEMENT = "persistedObject";
+    public static final String XML_ROOT_ELEMENT = "persistedClass";
+    public static final String XML_CLASS_ATTRIBUT = "name";
+    public static final String XML_OBJECT_ELEMENT = "object";
+    public static final String XML_OBJECT_ID = "id";
 
     private Properties properties;
 
