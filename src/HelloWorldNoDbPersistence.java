@@ -38,8 +38,10 @@ class HelloWorldNoDbPersistence {
 
         pm.persist(test);
         pm.persist(test12);
+
         pm.persist(test2);
 
+        test.setText("aaaaa");
         pm.persist(test);
         System.out.println(test2.getList().toString());
     }
