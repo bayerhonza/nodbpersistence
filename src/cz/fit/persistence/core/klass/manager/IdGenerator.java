@@ -1,8 +1,11 @@
 package cz.fit.persistence.core.klass.manager;
 
+import java.io.Serializable;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class IdGenerator {
+
+// TODO make IdGenerator persisted - serialize
+public class IdGenerator implements Serializable {
 
     private static final Integer GENERATOR_STEP = 1;
 

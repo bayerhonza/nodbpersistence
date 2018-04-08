@@ -5,8 +5,10 @@ import cz.fit.persistence.core.PersistenceContext;
 import cz.fit.persistence.core.events.PersistEntityEvent;
 import cz.fit.persistence.core.helpers.ConvertStringToType;
 import cz.fit.persistence.core.storage.ClassFileHandler;
+import cz.fit.persistence.core.storage.XMLParseException;
 import cz.fit.persistence.exceptions.PersistenceException;
 import org.w3c.dom.*;
+import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -16,6 +18,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.*;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
@@ -24,7 +27,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Main persistence unit for all instances of a class. It collects all the objects and performs all the
+ * actions with persisted object: persist, update or load
+ *
+ * @param <T> class which class manager is responsible for
+ */
 public class DefaultClassManagerImpl<T> {
+    private final PersistenceContext persistenceContext;
+
     private final Class<T> persistedClass;
     private final Integer classHashCode;
 
@@ -36,20 +47,29 @@ public class DefaultClassManagerImpl<T> {
 
 
     private ClassFileHandler fileHandler;
+
+    // XML model
+    DocumentBuilder documentBuilder;
     private Document xmlDocument;
     private Element rootElement;
-    Transformer transformer;
-    XPathFactory xPathFactory = XPathFactory.newInstance();
+    private Transformer transformer;
+    private XPathFactory xPathFactory = XPathFactory.newInstance();
 
 
-    public DefaultClassManagerImpl(Class<T> persistedClass, Integer classHashCode) {
+    public DefaultClassManagerImpl(PersistenceContext persistenceContext, Class<T> persistedClass, Integer classHashCode, boolean xmlFileExists, ClassFileHandler classFileHandler) {
+        this.persistenceContext = persistenceContext;
         this.persistedClass = persistedClass;
         this.idGenerator = new IdGenerator();
         this.classHashCode = classHashCode;
+        this.fileHandler = classFileHandler;
         this.objectIdField = getObjectIdField();
 
-        initXMLDocument(persistedClass);
-        initXMLTransformer();
+        if (!xmlFileExists) {
+            initXMLDocument(persistedClass);
+            initXMLTransformer();
+        } else {
+            refreshPersistedObjects();
+        }
     }
 
     public String getClassCanonicalName() {
@@ -66,6 +86,28 @@ public class DefaultClassManagerImpl<T> {
 
     public ClassFileHandler getFileHandler() {
         return fileHandler;
+    }
+
+    public void refreshPersistedObjects() {
+        initXMLDocumentBuilder();
+        initXMLTransformer();
+
+        try {
+            xmlDocument = documentBuilder.parse(fileHandler.getXmlClassFile());
+            xmlDocument.getDocumentElement().normalize();
+            Element rootElementLocal = xmlDocument.getDocumentElement();
+            if (rootElementLocal.getNodeName() == PersistenceContext.XML_ELEMENT_ROOT) {
+                rootElement = rootElementLocal;
+            } else {
+                throw new XMLParseException();
+            }
+            Object obj = getObjectById(1);
+            if (obj.getClass().equals(persistedClass)) {
+                System.out.println(obj.toString());
+            }
+        } catch (SAXException | IOException | XMLParseException e) {
+            throw new PersistenceException(e);
+        }
     }
 
     public void performPersist(PersistEntityEvent persistEvent) throws PersistenceException {
@@ -90,19 +132,20 @@ public class DefaultClassManagerImpl<T> {
         return objectNode;
     }
 
-
-    private void initXMLDocument(Class<T> persistedClass) {
-        DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newDefaultInstance();
-        DocumentBuilder documentBuilder;
+    private void initXMLDocumentBuilder() {
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         try {
-            documentBuilder = dbFactory.newDocumentBuilder();
+            documentBuilder = documentBuilderFactory.newDocumentBuilder();
         } catch (ParserConfigurationException e) {
             throw new PersistenceException(e);
         }
         xmlDocument = documentBuilder.newDocument();
+    }
 
-        rootElement = xmlDocument.createElement(PersistenceContext.XML_ROOT_ELEMENT);
-        Attr className = xmlDocument.createAttribute(PersistenceContext.XML_CLASS_ATTRIBUT);
+    private void initXMLDocument(Class<T> persistedClass) {
+        initXMLDocumentBuilder();
+        rootElement = xmlDocument.createElement(PersistenceContext.XML_ELEMENT_ROOT);
+        Attr className = xmlDocument.createAttribute(PersistenceContext.XML_ATTRIBUTE_CLASS);
         className.setValue(persistedClass.getCanonicalName());
         rootElement.setAttributeNode(className);
         xmlDocument.appendChild(rootElement);
@@ -154,10 +197,10 @@ public class DefaultClassManagerImpl<T> {
     private void persistObject(Integer objectId, Object object) throws PersistenceException {
 
         try {
-            Element persistedObject = xmlDocument.createElement(PersistenceContext.XML_OBJECT_ELEMENT);
+            Element persistedObject = xmlDocument.createElement(PersistenceContext.XML_ELEMENT_OBJECT);
             rootElement.appendChild(persistedObject);
 
-            persistedObject.setAttribute(PersistenceContext.XML_OBJECT_ID, objectId.toString());
+            persistedObject.setAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID, objectId.toString());
 
             Field[] fields = object.getClass().getDeclaredFields();
 
@@ -187,7 +230,6 @@ public class DefaultClassManagerImpl<T> {
         DOMSource source = new DOMSource(xmlDocument);
         StreamResult result = new StreamResult(fileHandler.getXMLOutputStream());
         transformer.transform(source, result);
-
     }
 
     private Integer getObjectId(Object object) throws PersistenceException {
@@ -221,13 +263,13 @@ public class DefaultClassManagerImpl<T> {
     }
 
     private Node getObjectNodeById(Integer objectId) {
-        return queryXMLModel("/" + PersistenceContext.XML_ROOT_ELEMENT + "/" + PersistenceContext.XML_OBJECT_ELEMENT + "[@" + PersistenceContext.XML_OBJECT_ID + "=" + objectId + "]");
+        return queryXMLModel("/" + PersistenceContext.XML_ELEMENT_ROOT + "/" + PersistenceContext.XML_ELEMENT_OBJECT + "[@" + PersistenceContext.XML_ATTRIBUTE_OBJECT_ID + "=" + objectId + "]");
 
     }
 
     private Node getObjectAttributByName(Integer objectId, String name) {
-        System.out.println("/" + PersistenceContext.XML_ROOT_ELEMENT + "/" + PersistenceContext.XML_OBJECT_ELEMENT + "[@" + PersistenceContext.XML_OBJECT_ID + "=" + objectId + "]/" + name);
-        return queryXMLModel("/" + PersistenceContext.XML_ROOT_ELEMENT + "/" + PersistenceContext.XML_OBJECT_ELEMENT + "[@" + PersistenceContext.XML_OBJECT_ID + "=" + objectId + "]/" + name);
+        System.out.println("/" + PersistenceContext.XML_ELEMENT_ROOT + "/" + PersistenceContext.XML_ELEMENT_OBJECT + "[@" + PersistenceContext.XML_ATTRIBUTE_OBJECT_ID + "=" + objectId + "]/" + name);
+        return queryXMLModel("/" + PersistenceContext.XML_ELEMENT_ROOT + "/" + PersistenceContext.XML_ELEMENT_OBJECT + "[@" + PersistenceContext.XML_ATTRIBUTE_OBJECT_ID + "=" + objectId + "]/" + name);
     }
 
     private Object getObjectById(Integer objectId) {
@@ -246,7 +288,7 @@ public class DefaultClassManagerImpl<T> {
             boolean accessibilityId = objectIdField.canAccess(newObj);
             objectIdField.setAccessible(true);
             Type typeId = objectIdField.getType();
-            String idToString = objectNode.getAttributes().getNamedItem(PersistenceContext.XML_OBJECT_ID).getNodeValue();
+            String idToString = objectNode.getAttributes().getNamedItem(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID).getNodeValue();
             objectIdField.set(newObj, ConvertStringToType.convertStringToType(typeId, idToString));
             objectIdField.setAccessible(accessibilityId);
         } catch (IllegalAccessException e) {
@@ -257,6 +299,9 @@ public class DefaultClassManagerImpl<T> {
         NodeList attributes = objectNode.getChildNodes();
         for (int i = 0; i < attributes.getLength(); i++) {
             Node attribute = attributes.item(i);
+            if (attribute.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
             String fieldName = attribute.getNodeName();
             try {
                 Field field = persistedClass.getDeclaredField(fieldName);

@@ -17,6 +17,14 @@ public class PersistenceSettings extends Properties {
         return this;
     }
 
+    public String getRootPath() {
+        return getProperty(ROOTFS_ELEMENT);
+    }
+
+    public String getCacheSize() {
+        return getProperty(CACHESIZE_ELEMENT);
+    }
+
     public PersistenceManagerFactory buildPersistenceManagerFactory() {
         PersistenceContext persistenceContext = new PersistenceContext();
         return new PersistenceManagerFactory(persistenceContext);

@@ -2,6 +2,9 @@ package cz.fit.persistence.core;
 
 import cz.fit.persistence.exceptions.PersistenceCoreException;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 public class PersistenceManagerFactoryBuilder {
 
     private final PersistenceContext persistenceContext;
@@ -13,5 +16,10 @@ public class PersistenceManagerFactoryBuilder {
 
     public PersistenceManagerFactory buildPersistenceManagerFactory() {
         return new PersistenceManagerFactory(persistenceContext);
+    }
+
+    private boolean isRootFsPresent(String rootFsDir) {
+        Path rooFsPath = Paths.get(rootFsDir);
+        return rooFsPath.toFile().exists();
     }
 }

@@ -9,7 +9,6 @@ public class PersistenceManagerFactory {
     }
 
     public PersistenceManager getPersistenceManager() {
-        //TODO implement persistence manager
         return new PersistenceManagerImpl(this);
     }
 

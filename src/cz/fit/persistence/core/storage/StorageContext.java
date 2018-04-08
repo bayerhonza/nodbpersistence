@@ -1,28 +1,36 @@
 package cz.fit.persistence.core.storage;
 
-import cz.fit.persistence.core.klass.manager.DefaultClassManagerImpl;
 import cz.fit.persistence.exceptions.PersistenceCoreException;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.Map;
 
 public class StorageContext {
 
     private final Path rootDirectory;
     private final boolean asRoot;
 
-    private final Map<DefaultClassManagerImpl, ClassFileHandler> classFileHandlers = new HashMap<>();
-
-    public StorageContext(String rootDirectory) {
+    /**
+     * Santadrt
+     *
+     * @param rootDirectory
+     */
+    public StorageContext(Path rootDirectory) {
         this(rootDirectory, false);
+
     }
 
-    private StorageContext(String rootDirectory, boolean asRoot) {
-        this.rootDirectory = Paths.get(rootDirectory);
+    /**
+     * Constructor for restoring StorageContext object from defined directory
+     *
+     * @param rootDirectory Directory file of context to be restored
+     */
+    private StorageContext(Path rootDirectory, boolean restore) {
+        this.rootDirectory = rootDirectory;
         this.asRoot = false;
     }
 
@@ -34,12 +42,34 @@ public class StorageContext {
         }
     }
 
-    public ClassFileHandler getClassHandler(DefaultClassManagerImpl classManager) {
-        ClassFileHandler classFileHandler = classFileHandlers.get(classManager);
-        if (classFileHandler == null) {
-            classFileHandler = new ClassFileHandler(Paths.get(rootDirectory.toString() + "/" + classManager.getClassCanonicalName() + ".xml"));
-            classFileHandlers.put(classManager, classFileHandler);
+    public ClassFileHandler createNewClassHandlerFile(String classCanonicalName) {
+        return createClassHandlerByPath(Paths.get(rootDirectory.toString() + "/" + classCanonicalName + ".xml"));
+    }
+
+    public ClassFileHandler createClassHandlerByPath(Path path) {
+        return new ClassFileHandler(path);
+    }
+
+    public HashMap<Class<?>, Path> scanForPersistedClass() {
+        HashMap<Class<?>, Path> classList = new HashMap<>();
+        File[] classDirs = rootDirectory.toFile().listFiles(File::isFile);
+        if (classDirs == null) {
+            return classList;
         }
-        return classFileHandler;
+        for (File classDir : classDirs) {
+            String dirName = classDir.toPath().getFileName().toString();
+
+            // delete the extension
+            dirName = dirName.substring(0, dirName.lastIndexOf("."));
+            try {
+                // check if class is loaded
+                Class<?> klazz = Class.forName(dirName);
+                classList.put(klazz, classDir.toPath());
+
+            } catch (ClassNotFoundException ignored) {
+                // not recognised class, skipp it
+            }
+        }
+        return classList;
     }
 }

@@ -7,6 +7,7 @@ import cz.fit.persistence.core.listeners.AbstractEventListener;
 import cz.fit.persistence.core.listeners.LoadEventListener;
 import cz.fit.persistence.core.listeners.PersistEventListener;
 import cz.fit.persistence.core.listeners.UpdateEventListener;
+import cz.fit.persistence.core.storage.ClassFileHandler;
 import cz.fit.persistence.core.storage.StorageContext;
 import cz.fit.persistence.exceptions.PersistenceCoreException;
 import cz.fit.persistence.exceptions.PersistenceException;
@@ -14,6 +15,7 @@ import cz.fit.persistence.exceptions.PersistenceException;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,14 +31,14 @@ public class PersistenceContext {
     public static final String ROOT_DIRECTORY_PROP = "rootDirectory";
     public static final String CACHE_SIZE_PROP = "cacheSize";
 
-    public static final String XML_ROOT_ELEMENT = "persistedClass";
-    public static final String XML_CLASS_ATTRIBUT = "name";
-    public static final String XML_OBJECT_ELEMENT = "object";
-    public static final String XML_OBJECT_ID = "id";
+    public static final String XML_ELEMENT_ROOT = "class";
+    public static final String XML_ELEMENT_OBJECT = "object";
+    public static final String XML_ATTRIBUTE_OBJECT_ID = "id";
+    public static final String XML_ATTRIBUTE_CLASS = "name";
 
     private Properties properties;
 
-    private final RegisteredListeners listeners = new RegisteredListeners();
+    private final ListenerRegistry listeners = new ListenerRegistry();
     private StorageContext storageContext;
     private final Map<Class<?>, DefaultClassManagerImpl> classClassManagerMap = new HashMap<>();
     private final Map<Integer, Class<?>> hashClassMap = new HashMap<>();
@@ -46,7 +48,6 @@ public class PersistenceContext {
      */
     PersistenceContext() {
         this(null);
-
     }
 
     /**
@@ -78,12 +79,26 @@ public class PersistenceContext {
 
     }
 
+    /**
+     * Initialize persistence system in given directory
+     *
+     * @throws PersistenceCoreException if an internal error occurs
+     */
     public void init() throws PersistenceCoreException {
         registerListeners();
         initStorageContext(properties.getProperty(ROOT_DIRECTORY_PROP));
-
+        HashMap<Class<?>, Path> listOfPresentClasses = storageContext.scanForPersistedClass();
+        loadClassManagers(listOfPresentClasses);
     }
 
+    /**
+     * Assigns a {@link DefaultClassManagerImpl} to given {@code objectClass}. It creates new class manage if class had
+     * not been yet persisted.
+     *
+     * @param objectClass {@link Class} object of persisted class
+     * @param <T>         persisted class
+     * @return {@link DefaultClassManagerImpl}
+     */
     @SuppressWarnings({"unchecked"})
     public <T> DefaultClassManagerImpl<T> findClassManager(Class<T> objectClass) {
         if (!classClassManagerMap.containsKey(objectClass)) {
@@ -98,14 +113,26 @@ public class PersistenceContext {
 
 
     private void initStorageContext(String rootDirectory) throws PersistenceCoreException {
-        storageContext = new StorageContext(rootDirectory);
+        storageContext = new StorageContext(Paths.get(rootDirectory));
         storageContext.init();
     }
 
     private <T> void createClassManager(Class<T> objectClass) {
-        DefaultClassManagerImpl<T> classManager = new DefaultClassManagerImpl<>(objectClass, hashClass(objectClass));
-        classManager.setFileHandler(storageContext.getClassHandler(classManager));
+        ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(objectClass.getCanonicalName());
+        DefaultClassManagerImpl<T> classManager = instantiateClassManager(objectClass, false, classFileHandler);
         classClassManagerMap.put(objectClass, classManager);
+    }
+
+    private void loadClassManagers(HashMap<Class<?>, Path> classes) {
+        classes.forEach((aClass, path) -> {
+            ClassFileHandler classFileHandler = storageContext.createClassHandlerByPath(path);
+            DefaultClassManagerImpl classManager = instantiateClassManager(aClass, true, classFileHandler);
+            classClassManagerMap.put(aClass, classManager);
+        });
+    }
+
+    private <T> DefaultClassManagerImpl<T> instantiateClassManager(Class<T> tClass, boolean xmlFileExists, ClassFileHandler classFileHandler) {
+        return new DefaultClassManagerImpl<T>(this, tClass, hashClass(tClass), xmlFileExists, classFileHandler);
     }
 
     private <T> Integer hashClass(Class<T> objectClass) {

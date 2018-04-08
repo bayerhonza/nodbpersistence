@@ -6,7 +6,7 @@ import cz.fit.persistence.core.listeners.AbstractEventListener;
 import java.util.HashMap;
 import java.util.Map;
 
-class RegisteredListeners {
+class ListenerRegistry {
 
     private final Map<Class<? extends AbstractEventListener>, AbstractEventListener> listeners = new HashMap<>();
 
