@@ -2,13 +2,17 @@ package cz.fit.persistence.core.events;
 
 import cz.fit.persistence.core.PersistenceManager;
 
-public class LoadEntityEvent extends AbstractEntityEvent<LoadEntityEvent> {
+/**
+ * Event for loading objects form persistence. {@code objectId} is the ID parameter of desired object. {@code klazz} is
+ * class of new object.
+ */
+public class LoadEntityEvent extends EntityEvent {
 
     private Integer objectId;
     private Class<?> klazz;
 
     public LoadEntityEvent(PersistenceManager source, Integer objectId, Class<?> klazz) {
-        super(null, source, EventType.LOAD);
+        super(null, source);
         this.objectId = objectId;
         this.klazz = klazz;
     }
@@ -19,10 +23,5 @@ public class LoadEntityEvent extends AbstractEntityEvent<LoadEntityEvent> {
 
     public Class<?> getLoadedClass() {
         return klazz;
-    }
-
-    @Override
-    public LoadEntityEvent getEvent() {
-        return this;
     }
 }

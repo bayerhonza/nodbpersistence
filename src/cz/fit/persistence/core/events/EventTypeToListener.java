@@ -6,9 +6,9 @@ import cz.fit.persistence.core.listeners.PersistEventListener;
 import cz.fit.persistence.core.listeners.UpdateEventListener;
 
 public final class EventTypeToListener<T extends AbstractEventListener> {
-    public static EventTypeToListener<LoadEventListener> LOAD_EVENT = new EventTypeToListener<>(EventType.LOAD, LoadEventListener.class);
+    public static final EventTypeToListener<LoadEventListener> LOAD_EVENT = new EventTypeToListener<>(EventType.LOAD, LoadEventListener.class);
     public static final EventTypeToListener<PersistEventListener> PERSIST_EVENT = new EventTypeToListener<>(EventType.PERSIST, PersistEventListener.class);
-    public static EventTypeToListener<UpdateEventListener> UPDATE_EVENT = new EventTypeToListener<>(EventType.UPDATE, UpdateEventListener.class);
+    public static final EventTypeToListener<UpdateEventListener> UPDATE_EVENT = new EventTypeToListener<>(EventType.UPDATE, UpdateEventListener.class);
 
     private final Class<T> listenerClass;
     private final EventType eventType;
@@ -20,9 +20,5 @@ public final class EventTypeToListener<T extends AbstractEventListener> {
 
     public Class<T> getListenerClass() {
         return listenerClass;
-    }
-
-    public EventType getEventType() {
-        return eventType;
     }
 }

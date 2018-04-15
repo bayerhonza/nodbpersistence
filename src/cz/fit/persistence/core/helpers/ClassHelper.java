@@ -1,17 +1,33 @@
 package cz.fit.persistence.core.helpers;
 
-import cz.fit.persistence.core.PersistenceContext;
 import cz.fit.persistence.exceptions.PersistenceException;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URL;
 import java.util.Date;
 import java.util.Locale;
 
+/**
+ * Utility for class handling.
+ */
 public class ClassHelper {
-
+    /**
+     * Checks if class is primitive type or its wrapper, or other simple type.
+     * Simple types:
+     * <ul>
+     *     <li>{@link Enum}</li>
+     *     <li>{@link CharSequence}</li>
+     *     <li>{@link Number}</li>
+     *     <li>{@link Date}</li>
+     *     <li>{@link URI}</li>
+     *     <li>{@link Locale}</li>
+     * </ul>
+     *
+     * Copied from <a href="https://github.com/spring-projects/spring-framework/blob/master/spring-beans/src/main/java/org/springframework/beans/BeanUtils.java">Spring project GitHub</a>
+     * @param clazz type to check
+     * @return {@code true} if is type is simple, else {@code false}
+     */
     public static boolean isSimpleValueType(Class<?> clazz) {
         return (isPrimitiveOrWrapper(clazz) ||
                 Enum.class.isAssignableFrom(clazz) ||

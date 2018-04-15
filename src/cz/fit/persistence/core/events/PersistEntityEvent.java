@@ -2,16 +2,14 @@ package cz.fit.persistence.core.events;
 
 import cz.fit.persistence.core.PersistenceManager;
 
-public class PersistEntityEvent extends AbstractEntityEvent<PersistEntityEvent> {
+/**
+ * Persist event.
+ */
+public class PersistEntityEvent extends EntityEvent {
 
     public PersistEntityEvent(Object object, PersistenceManager persistenceManager) {
-        super(object, persistenceManager, EventType.PERSIST);
+        super(object, persistenceManager);
 
-    }
-
-    @Override
-    public PersistEntityEvent getEvent() {
-        return this;
     }
 
 
