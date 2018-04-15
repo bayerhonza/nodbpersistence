@@ -24,17 +24,28 @@ class HelloWorldNoDbPersistence {
         }
 
         PersistenceManager pm = persistenceManagerFactory.getPersistenceManager();
+        /*long elapsedTime = 0;
+        for (int i = 0; i < 1000; i++) {
+            Test1 test = new Test1()
+                    .setNumber(i)
+                    .setText("text: " + i);
+            long before = System.nanoTime();
+            pm.persist(test);
+            elapsedTime += System.nanoTime() - before;
+        }
 
-        Test1 test = new Test1();
+
+        System.out.println(TimeUnit.NANOSECONDS.toMillis(elapsedTime));*/
+
+        Test1 test = new Test1(null);
         test.setNumber(1)
                 .setText("hello");
 
-        Test1 test12 = new Test1()
-                .setNumber(2)
-                .setText("asdfasdfasdf");
-
         Test2 test2 = new Test2();
         test2.addToList("ahoj");
+        Test1 test12 = new Test1(test2)
+                .setNumber(2)
+                .setText("asdfasdfasdf");
 
         pm.persist(test);
         pm.persist(test12);
@@ -44,5 +55,8 @@ class HelloWorldNoDbPersistence {
         test.setText("aaaaa");
         pm.persist(test);
         System.out.println(test2.getList().toString());
+
+        Test1 test_loaded = (Test1) pm.load(1, Test1.class);
+        System.out.println(test_loaded.toString());
     }
 }

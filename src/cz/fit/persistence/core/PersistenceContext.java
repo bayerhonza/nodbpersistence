@@ -36,6 +36,12 @@ public class PersistenceContext {
     public static final String XML_ATTRIBUTE_OBJECT_ID = "id";
     public static final String XML_ATTRIBUTE_CLASS = "name";
 
+    public static final String XML_ATTRIBUTE_COLLECITON = "collectionOrMap";
+    public static final String XML_ATTRIBUTE_COLLECITON_ITEM = "item";
+    public static final String XML_ATTRIBUTE_FIELD = "field";
+    public static final String XML_ATTRIBUTE_FIELD_NAME = "name";
+    public static final String XML_ATTRIBUTE_FIELD_REFERENCE = "ref";
+
     private Properties properties;
 
     private final ListenerRegistry listeners = new ListenerRegistry();
@@ -66,7 +72,6 @@ public class PersistenceContext {
 
     public <T extends AbstractEventListener> T getListenerToEvent(EventTypeToListener<T> eventTypeToListener) {
         return listeners.findListener(eventTypeToListener);
-
     }
 
     private void loadXMLProperties() throws PersistenceException {
@@ -110,7 +115,6 @@ public class PersistenceContext {
     public StorageContext getStorageContext() {
         return storageContext;
     }
-
 
     private void initStorageContext(String rootDirectory) throws PersistenceCoreException {
         storageContext = new StorageContext(Paths.get(rootDirectory));

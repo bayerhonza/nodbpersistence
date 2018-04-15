@@ -14,7 +14,7 @@ public class PersistenceException extends RuntimeException {
         super(ex);
     }
 
-    public PersistenceException(String msg,Throwable ex) {
-        super(msg,ex);
+    public PersistenceException(String msg, Throwable ex) {
+        super(msg, ex);
     }
 }

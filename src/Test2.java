@@ -7,12 +7,12 @@ class Test2 {
 
     @ObjectId
     private Integer objectId;
-
     private List<String> list = new ArrayList<>();
 
     public Test2() {
-        list.add("ahoj");
     }
+
+    ;
 
     public void setList(List<String> list) {
         this.list = list;

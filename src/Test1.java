@@ -10,8 +10,14 @@ public class Test1 {
 
     private int number;
 
+    private Test2 test2;
+
     public int getNumber() {
         return number;
+    }
+
+    public Test1(Test2 test2) {
+        this.test2 = test2;
     }
 
     public Test1 setNumber(int number) {

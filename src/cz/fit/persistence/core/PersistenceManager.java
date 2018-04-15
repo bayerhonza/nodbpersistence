@@ -8,7 +8,7 @@ public interface PersistenceManager {
 
     void update(Object object) throws PersistenceException;
 
-    void find(Object object) throws PersistenceException;
+    Object load(Integer objectId, Class<?> klazz) throws PersistenceException;
 
     PersistenceContext getContext();
 

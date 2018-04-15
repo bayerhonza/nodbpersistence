@@ -2,8 +2,11 @@ package cz.fit.persistence.core.klass.manager;
 
 import cz.fit.persistence.annotations.ObjectId;
 import cz.fit.persistence.core.PersistenceContext;
+import cz.fit.persistence.core.PersistenceManager;
 import cz.fit.persistence.core.events.PersistEntityEvent;
+import cz.fit.persistence.core.helpers.ClassHelper;
 import cz.fit.persistence.core.helpers.ConvertStringToType;
+import cz.fit.persistence.core.helpers.HashHelper;
 import cz.fit.persistence.core.storage.ClassFileHandler;
 import cz.fit.persistence.core.storage.XMLParseException;
 import cz.fit.persistence.exceptions.PersistenceException;
@@ -19,10 +22,12 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.*;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -101,13 +106,13 @@ public class DefaultClassManagerImpl<T> {
             } else {
                 throw new XMLParseException();
             }
-            Object obj = getObjectById(1);
-            if (obj.getClass().equals(persistedClass)) {
-                System.out.println(obj.toString());
-            }
         } catch (SAXException | IOException | XMLParseException e) {
             throw new PersistenceException(e);
         }
+    }
+
+    public Object performLoad(Integer objectId) {
+        return (T) getObjectById(objectId);
     }
 
     public void performPersist(PersistEntityEvent persistEvent) throws PersistenceException {
@@ -116,7 +121,7 @@ public class DefaultClassManagerImpl<T> {
         if (isAlreadyPersisted(objectId)) {
             updateObject(objectId, persistedObject);
         } else {
-            persistObject(objectId, persistedObject);
+            persistObject(objectId, persistedObject, persistEvent.getSource());
         }
     }
 
@@ -194,12 +199,14 @@ public class DefaultClassManagerImpl<T> {
         }
     }
 
-    private void persistObject(Integer objectId, Object object) throws PersistenceException {
+    private void persistObject(Integer objectId, Object object, PersistenceManager persistenceManager) throws PersistenceException {
 
         try {
+            // top level XML elemet <persistedObject>
             Element persistedObject = xmlDocument.createElement(PersistenceContext.XML_ELEMENT_OBJECT);
             rootElement.appendChild(persistedObject);
 
+            // attribute of top level XML element with objectId
             persistedObject.setAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID, objectId.toString());
 
             Field[] fields = object.getClass().getDeclaredFields();
@@ -208,13 +215,40 @@ public class DefaultClassManagerImpl<T> {
                 if (field.isAnnotationPresent(ObjectId.class)) {
                     continue;
                 }
-                Element xmlField = xmlDocument.createElement(field.getName());
+
+                // XML element for field of class, format <field name="nameOfField">value</field>
+                Element xmlField = xmlDocument.createElement(PersistenceContext.XML_ATTRIBUTE_FIELD);
+                persistedObject.appendChild(xmlField);
+                xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_NAME, field.getName());
+
+
                 boolean accessible = field.canAccess(object);
                 field.setAccessible(true);
 
-                // TODO support non primitive types and collections
-                xmlField.appendChild(xmlDocument.createTextNode(field.get(object) == null ? null : field.get(object).toString()));
-                persistedObject.appendChild(xmlField);
+                // check the type of the field
+                Object fieldValue = field.get(object);
+                if (fieldValue == null || ClassHelper.isSimpleValueType(fieldValue.getClass())) {
+                    xmlField.appendChild(xmlDocument.createTextNode(fieldValue == null ? null : fieldValue.toString()));
+                } else if (fieldValue instanceof Collection<?>) {
+                    xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLLECITON, Boolean.TRUE.toString());
+
+                    Collection fieldValueCollection = (Collection) fieldValue;
+                    for (Object o : fieldValueCollection) {
+                        Element xmlItemElement = xmlDocument.createElement(PersistenceContext.XML_ATTRIBUTE_COLLECITON_ITEM);
+                        xmlField.appendChild(xmlItemElement);
+
+                        if (ClassHelper.isSimpleValueType(o.getClass())) {
+                            xmlItemElement.appendChild(xmlDocument.createTextNode(o.toString()));
+                        } else {
+                            String reference = startCascade(o, persistenceManager);
+                            xmlItemElement.appendChild(xmlDocument.createTextNode(reference));
+                        }
+                    }
+                } else {
+                    String reference = startCascade(fieldValue, persistenceManager);
+                    xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE, reference);
+
+                }
                 field.setAccessible(accessible);
             }
             persistedObjects.put(objectId, persistedObject);
@@ -232,7 +266,10 @@ public class DefaultClassManagerImpl<T> {
         transformer.transform(source, result);
     }
 
-    private Integer getObjectId(Object object) throws PersistenceException {
+    public Integer getObjectId(Object object) throws PersistenceException {
+        if (!object.getClass().equals(persistedClass)) {
+            throw new PersistenceException("Wrong Class Manager.");
+        }
         try {
             boolean accessibility = objectIdField.canAccess(object);
             objectIdField.setAccessible(true);
@@ -275,9 +312,14 @@ public class DefaultClassManagerImpl<T> {
     private Object getObjectById(Integer objectId) {
         Node objectNode = getObjectNodeById(objectId);
 
+        // construction of object
         T newObj = null;
         try {
-            newObj = persistedClass.getConstructor().newInstance();
+            Constructor<T> constructor = persistedClass.getConstructor();
+            boolean accs = constructor.canAccess(null);
+            constructor.setAccessible(true);
+            newObj = constructor.newInstance();
+            constructor.setAccessible(accs);
 
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             e.printStackTrace();
@@ -296,22 +338,24 @@ public class DefaultClassManagerImpl<T> {
         }
 
         // setting of all the other attributes
-        NodeList attributes = objectNode.getChildNodes();
-        for (int i = 0; i < attributes.getLength(); i++) {
-            Node attribute = attributes.item(i);
-            if (attribute.getNodeType() != Node.ELEMENT_NODE) {
+        NodeList fields = objectNode.getChildNodes();
+        for (int i = 0; i < fields.getLength(); i++) {
+            Node xmlField = fields.item(i);
+            if (xmlField.getNodeType() != Node.ELEMENT_NODE) {
                 continue;
             }
-            String fieldName = attribute.getNodeName();
+            String fieldName = xmlField.getAttributes().getNamedItem("name").getNodeValue();
             try {
                 Field field = persistedClass.getDeclaredField(fieldName);
                 boolean accessibility = field.canAccess(newObj);
                 field.setAccessible(true);
 
                 // TODO support collections and non primitive types
-                String fieldValue = attribute.getFirstChild().getNodeValue();
-                field.set(newObj, ConvertStringToType.convertStringToType(field.getType(), fieldValue));
-                field.setAccessible(accessibility);
+                if (ClassHelper.isSimpleValueType(field.getClass())) {
+                    String fieldValue = xmlField.getFirstChild().getNodeValue();
+                    field.set(newObj, ConvertStringToType.convertStringToType(field.getType(), fieldValue));
+                } else
+                    field.setAccessible(accessibility);
             } catch (NoSuchFieldException e) {
                 throw new PersistenceException(e);
             } catch (IllegalAccessException e) {
@@ -372,6 +416,15 @@ public class DefaultClassManagerImpl<T> {
         } catch (IllegalAccessException e) {
             throw new PersistenceException(e);
         }
+    }
+
+    private String startCascade(Object object, PersistenceManager persistenceManager) {
+        persistenceManager.persist(object);
+        Integer objectId = persistenceContext.findClassManager(object.getClass()).getObjectId(object);
+
+        Integer hashClass = HashHelper.getHashFromClass(object.getClass());
+        System.out.println(hashClass + "#" + objectId);
+        return hashClass + "#" + objectId;
     }
 
 }
