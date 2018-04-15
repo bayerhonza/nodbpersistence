@@ -4,6 +4,11 @@ import cz.fit.persistence.core.PersistenceManagerFactoryBuilder;
 import cz.fit.persistence.core.PersistenceSettings;
 import cz.fit.persistence.exceptions.PersistenceCoreException;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 class HelloWorldNoDbPersistence {
 
 
@@ -37,26 +42,34 @@ class HelloWorldNoDbPersistence {
 
         System.out.println(TimeUnit.NANOSECONDS.toMillis(elapsedTime));*/
 
-        Test1 test = new Test1(null);
+        Test1 test = new Test1();
         test.setNumber(1)
-                .setText("hello");
+                .setText("hello")
+                .setTest2(null);
 
         Test2 test2 = new Test2();
         test2.addToList("ahoj");
-        Test1 test12 = new Test1(test2)
+
+        Test2 test21 = new Test2();
+
+        List<List<Test2>> list = test.getList();
+        List<Test2> nextList = new ArrayList<>();
+        nextList.add(test2);
+        nextList.add(test21);
+        list.add(nextList);
+
+
+
+        /*Test2 test2 = new Test2();
+        test2.addToList("ahoj");
+        Test1 test12 = new Test1()
                 .setNumber(2)
-                .setText("asdfasdfasdf");
-
+                .setText("asdfasdfasdf")
+                .setTest2(test2);
+        */
         pm.persist(test);
-        pm.persist(test12);
 
-        pm.persist(test2);
-
-        test.setText("aaaaa");
-        pm.persist(test);
-        System.out.println(test2.getList().toString());
-
-        Test1 test_loaded = (Test1) pm.load(1, Test1.class);
-        System.out.println(test_loaded.toString());
+        /*Test1 test_loaded = (Test1) pm.load(1, Test1.class);
+        System.out.println(test_loaded.toString());*/
     }
 }

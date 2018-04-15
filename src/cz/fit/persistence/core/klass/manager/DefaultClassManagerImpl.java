@@ -22,10 +22,7 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.*;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -227,28 +224,9 @@ public class DefaultClassManagerImpl<T> {
 
                 // check the type of the field
                 Object fieldValue = field.get(object);
-                if (fieldValue == null || ClassHelper.isSimpleValueType(fieldValue.getClass())) {
-                    xmlField.appendChild(xmlDocument.createTextNode(fieldValue == null ? null : fieldValue.toString()));
-                } else if (fieldValue instanceof Collection<?>) {
-                    xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLLECITON, Boolean.TRUE.toString());
+                createXMLStructure(xmlField,fieldValue,persistenceManager);
 
-                    Collection fieldValueCollection = (Collection) fieldValue;
-                    for (Object o : fieldValueCollection) {
-                        Element xmlItemElement = xmlDocument.createElement(PersistenceContext.XML_ATTRIBUTE_COLLECITON_ITEM);
-                        xmlField.appendChild(xmlItemElement);
 
-                        if (ClassHelper.isSimpleValueType(o.getClass())) {
-                            xmlItemElement.appendChild(xmlDocument.createTextNode(o.toString()));
-                        } else {
-                            String reference = startCascade(o, persistenceManager);
-                            xmlItemElement.appendChild(xmlDocument.createTextNode(reference));
-                        }
-                    }
-                } else {
-                    String reference = startCascade(fieldValue, persistenceManager);
-                    xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE, reference);
-
-                }
                 field.setAccessible(accessible);
             }
             persistedObjects.put(objectId, persistedObject);
@@ -305,25 +283,16 @@ public class DefaultClassManagerImpl<T> {
     }
 
     private Node getObjectAttributByName(Integer objectId, String name) {
-        System.out.println("/" + PersistenceContext.XML_ELEMENT_ROOT + "/" + PersistenceContext.XML_ELEMENT_OBJECT + "[@" + PersistenceContext.XML_ATTRIBUTE_OBJECT_ID + "=" + objectId + "]/" + name);
-        return queryXMLModel("/" + PersistenceContext.XML_ELEMENT_ROOT + "/" + PersistenceContext.XML_ELEMENT_OBJECT + "[@" + PersistenceContext.XML_ATTRIBUTE_OBJECT_ID + "=" + objectId + "]/" + name);
+        String query = "/" + PersistenceContext.XML_ELEMENT_ROOT + "/"
+                + PersistenceContext.XML_ELEMENT_OBJECT + "[@" + PersistenceContext.XML_ATTRIBUTE_OBJECT_ID + "=" + objectId + "]/"
+                + PersistenceContext.XML_ATTRIBUTE_FIELD + "[@" + PersistenceContext.XML_ATTRIBUTE_FIELD_NAME + "=\"" + name +"\"]";
+        System.out.println(query);
+        return queryXMLModel(query);
     }
 
     private Object getObjectById(Integer objectId) {
         Node objectNode = getObjectNodeById(objectId);
-
-        // construction of object
-        T newObj = null;
-        try {
-            Constructor<T> constructor = persistedClass.getConstructor();
-            boolean accs = constructor.canAccess(null);
-            constructor.setAccessible(true);
-            newObj = constructor.newInstance();
-            constructor.setAccessible(accs);
-
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            e.printStackTrace();
-        }
+        T newObj = ClassHelper.instantiateClass(persistedClass);
 
         // setting of objectID
         try {
@@ -354,17 +323,79 @@ public class DefaultClassManagerImpl<T> {
                 if (ClassHelper.isSimpleValueType(field.getClass())) {
                     String fieldValue = xmlField.getFirstChild().getNodeValue();
                     field.set(newObj, ConvertStringToType.convertStringToType(field.getType(), fieldValue));
-                } else
-                    field.setAccessible(accessibility);
-            } catch (NoSuchFieldException e) {
+                } else if (Collection.class.isAssignableFrom(field.getType())) {
+                    Collection newCollection = (Collection) loadCollection(xmlField,field.getType(),field);
+                    System.out.println(newCollection.toString());
+                } else {
+                    // cascade
+
+                }
+                /*if (ClassHelper.isSimpleValueType(field.getClass())) {
+                    String fieldValue = xmlField.getFirstChild().getNodeValue();
+                    field.set(newObj, ConvertStringToType.convertStringToType(field.getType(), fieldValue));
+                }*/
+                field.setAccessible(accessibility);
+
+            } catch (Exception e) {
                 throw new PersistenceException(e);
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
             }
 
 
         }
         return newObj;
+    }
+
+    private Object loadCollection(Node node, Class<?> collectionClass,Field field) throws Exception {
+        //Constructor<?> collectionConstructor = collectionClass.getConstructor();
+        //Collection<?> newCollection = (Collection<?>) collectionConstructor.newInstance();
+        ParameterizedType collectionGenericType = (ParameterizedType) field.getGenericType();
+        Class<?> collectionGenericClass = (Class<?>) collectionGenericType.getActualTypeArguments()[0];
+        return null;
+    }
+
+    /**
+     * Creates an XML in-memory model of object.
+     *
+     * @param xmlField root field for XML
+     * @param object object to be stored
+     * @param persistenceManager persistence manager of event to store the object if part of collection
+     */
+    private void createXMLStructure(Element xmlField, Object object, PersistenceManager persistenceManager) {
+
+        if (object == null || ClassHelper.isSimpleValueType(object.getClass())) {
+            xmlField.appendChild(xmlDocument.createTextNode(object == null ? null : object.toString()));
+        } else if (object instanceof Collection<?>) {
+            xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS,object.getClass().getCanonicalName());
+
+            // if object is a collection, then recast
+            Collection fieldValueCollection = (Collection) object;
+            for (Object o : fieldValueCollection) {
+                Element xmlItemElement = xmlDocument.createElement(PersistenceContext.XML_ATTRIBUTE_COLLECITON_ITEM);
+                if (o == null) {
+                    xmlItemElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL,Boolean.TRUE.toString());
+                    xmlField.appendChild(xmlItemElement);
+                    continue;
+                }
+                xmlItemElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS,o.getClass().getCanonicalName());
+                xmlField.appendChild(xmlItemElement);
+
+                if (ClassHelper.isSimpleValueType(o.getClass())) {
+                    xmlItemElement.appendChild(xmlDocument.createTextNode(o.toString()));
+                } else if (o instanceof Collection<?>) {
+                    // if item of collection is a collection, recurse
+                    createXMLStructure(xmlItemElement,o,persistenceManager);
+                } else {
+                    // persist item as object
+                    String reference = startCascade(o,persistenceManager);
+                    xmlItemElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE, reference);
+                }
+            }
+        } else {
+            String reference = startCascade(object, persistenceManager);
+            xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE, reference);
+
+        }
+
     }
 
     private boolean isAlreadyPersisted(Integer objectId) {

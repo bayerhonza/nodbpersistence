@@ -1,5 +1,10 @@
 package cz.fit.persistence.core.helpers;
 
+import cz.fit.persistence.core.PersistenceContext;
+import cz.fit.persistence.exceptions.PersistenceException;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URL;
 import java.util.Date;
@@ -26,5 +31,27 @@ public class ClassHelper {
         if (clazz.equals(Float.class) || clazz.equals(float.class)) return true;
         if (clazz.equals(Double.class) || clazz.equals(double.class)) return true;
         return false;
+    }
+
+    /**
+     * Instantiate a new object of desired class by using no-argument constructor.
+     *
+     * It is crucial that object be POJO!.
+     * @param klass desired class
+     * @param <T> paramater of class
+     * @return object of {@code T} instance
+     */
+    public static <T> T instantiateClass(Class<T> klass) {
+        try {
+            Constructor<T> constructor = klass.getConstructor();
+            boolean accs = constructor.canAccess(null);
+            constructor.setAccessible(true);
+            T newObj = constructor.newInstance();
+            constructor.setAccessible(accs);
+            return newObj;
+        } catch (Exception e) {
+            new PersistenceException(e);
+        }
+        return null;
     }
 }

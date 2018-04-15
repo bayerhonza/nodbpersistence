@@ -36,7 +36,8 @@ public class PersistenceContext {
     public static final String XML_ATTRIBUTE_OBJECT_ID = "id";
     public static final String XML_ATTRIBUTE_CLASS = "name";
 
-    public static final String XML_ATTRIBUTE_COLLECITON = "collectionOrMap";
+    public static final String XML_ATTRIBUTE_COLL_INST_CLASS = "inst_class";
+    public static final String XML_ATTRIBUTE_ISNULL = "is_null";
     public static final String XML_ATTRIBUTE_COLLECITON_ITEM = "item";
     public static final String XML_ATTRIBUTE_FIELD = "field";
     public static final String XML_ATTRIBUTE_FIELD_NAME = "name";
