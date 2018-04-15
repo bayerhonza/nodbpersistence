@@ -41,7 +41,6 @@ public class DefaultClassManagerImpl<T> {
     private final PersistenceContext persistenceContext;
 
     private final Class<T> persistedClass;
-    private final Integer classHashCode;
 
     private final Field objectIdField;
 
@@ -53,17 +52,16 @@ public class DefaultClassManagerImpl<T> {
     private ClassFileHandler fileHandler;
 
     // XML model
-    DocumentBuilder documentBuilder;
+    private DocumentBuilder documentBuilder;
     private Document xmlDocument;
     private Element rootElement;
     private Transformer transformer;
     private XPathFactory xPathFactory = XPathFactory.newInstance();
 
 
-    public DefaultClassManagerImpl(PersistenceContext persistenceContext, Class<T> persistedClass, Integer classHashCode, boolean xmlFileExists, ClassFileHandler classFileHandler) {
+    public DefaultClassManagerImpl(PersistenceContext persistenceContext, Class<T> persistedClass, boolean xmlFileExists, ClassFileHandler classFileHandler) {
         this.persistenceContext = persistenceContext;
         this.persistedClass = persistedClass;
-        this.classHashCode = classHashCode;
         this.fileHandler = classFileHandler;
         this.objectIdField = getObjectIdField();
 
@@ -75,23 +73,7 @@ public class DefaultClassManagerImpl<T> {
         }
     }
 
-    public String getClassCanonicalName() {
-        return persistedClass.getCanonicalName();
-    }
-
-    public Class<T> getPersistedClass() {
-        return persistedClass;
-    }
-
-    public void setFileHandler(ClassFileHandler file) {
-        this.fileHandler = file;
-    }
-
-    public ClassFileHandler getFileHandler() {
-        return fileHandler;
-    }
-
-    public void refreshPersistedObjects() {
+    private void refreshPersistedObjects() {
         initXMLDocumentBuilder();
         initXMLTransformer();
 
@@ -127,7 +109,7 @@ public class DefaultClassManagerImpl<T> {
 
 
     public Object performLoad(Integer objectId) {
-        return (T) getObjectById(objectId);
+        return getObjectById(objectId);
     }
 
     public void performPersist(PersistEntityEvent persistEvent) throws PersistenceException {
@@ -140,7 +122,7 @@ public class DefaultClassManagerImpl<T> {
         }
     }
 
-    public Node queryXMLModel(String xmlPathQuery) {
+    private Node queryXMLModel(String xmlPathQuery) {
         XPath xPath = xPathFactory.newXPath();
         Node objectNode;
         try {
@@ -191,11 +173,6 @@ public class DefaultClassManagerImpl<T> {
             throw new PersistenceException(e);
         }
 
-    }
-
-    private boolean isAlreadyPersisted(Object object) {
-
-        return true;
     }
 
     private void updateObject(Integer objectId, Object object) {
@@ -273,7 +250,7 @@ public class DefaultClassManagerImpl<T> {
         transformer.transform(source, result);
     }
 
-    public Integer getObjectId(Object object) throws PersistenceException {
+    private Integer getObjectId(Object object) throws PersistenceException {
         if (!object.getClass().equals(persistedClass)) {
             throw new PersistenceException("Wrong Class Manager.");
         }
@@ -418,8 +395,6 @@ public class DefaultClassManagerImpl<T> {
                 newCollection.add(ConvertStringToType.convertStringToType(instClass, fieldValue));
             } else if (Collection.class.isAssignableFrom(instClass)) {
                 newCollection.add(loadCollection(element));
-            } else {
-
             }
 
         }
@@ -436,8 +411,8 @@ public class DefaultClassManagerImpl<T> {
     private void createXMLStructure(Element xmlField, Object object, PersistenceManager persistenceManager) {
         if (object == null) {
             xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL, Boolean.TRUE.toString());
-        } else if (object == null || ClassHelper.isSimpleValueType(object.getClass())) {
-            xmlField.appendChild(xmlDocument.createTextNode(object == null ? null : object.toString()));
+        } else if (ClassHelper.isSimpleValueType(object.getClass())) {
+            xmlField.appendChild(xmlDocument.createTextNode(object.toString()));
         } else if (object instanceof Collection<?>) {
             xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS, object.getClass().getCanonicalName());
 
@@ -467,11 +442,7 @@ public class DefaultClassManagerImpl<T> {
             }
         } else {
             String reference = startCascade(object, persistenceManager);
-            if (object == null) {
-                xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE, null);
-            } else {
-                xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE, reference);
-            }
+            xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE, reference);
 
         }
 
@@ -531,8 +502,6 @@ public class DefaultClassManagerImpl<T> {
     private String startCascade(Object object, PersistenceManager persistenceManager) {
         persistenceManager.persist(object);
         Integer objectId = persistenceContext.findClassManager(object.getClass()).getObjectId(object);
-
-        Integer hashClass = HashHelper.getHashFromClass(object.getClass());
         return object.getClass().getCanonicalName() + "#" + objectId;
     }
 }

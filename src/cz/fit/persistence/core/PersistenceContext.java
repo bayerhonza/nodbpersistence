@@ -142,13 +142,7 @@ public class PersistenceContext {
     }
 
     private <T> DefaultClassManagerImpl<T> instantiateClassManager(Class<T> tClass, boolean xmlFileExists, ClassFileHandler classFileHandler) {
-        return new DefaultClassManagerImpl<>(this, tClass, hashClass(tClass), xmlFileExists, classFileHandler);
-    }
-
-    private <T> Integer hashClass(Class<T> objectClass) {
-        Integer classHashCode = HashHelper.getHashFromClass(objectClass);
-        hashClassMap.put(classHashCode, objectClass);
-        return classHashCode;
+        return new DefaultClassManagerImpl<>(this, tClass, xmlFileExists, classFileHandler);
     }
 
     private void registerListeners() {

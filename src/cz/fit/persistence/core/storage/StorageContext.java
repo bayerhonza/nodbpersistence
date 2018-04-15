@@ -12,12 +12,11 @@ import java.util.HashMap;
 public class StorageContext {
 
     private final Path rootDirectory;
-    private final boolean asRoot;
 
     /**
-     * Santadrt
+     * Storage context
      *
-     * @param rootDirectory
+     * @param rootDirectory root directory for persistence
      */
     public StorageContext(Path rootDirectory) {
         this(rootDirectory, false);
@@ -31,7 +30,6 @@ public class StorageContext {
      */
     private StorageContext(Path rootDirectory, boolean restore) {
         this.rootDirectory = rootDirectory;
-        this.asRoot = false;
     }
 
     public void init() throws PersistenceCoreException {

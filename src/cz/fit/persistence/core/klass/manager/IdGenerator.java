@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * It is created by  {@link DefaultClassManagerImpl}.
  */
-public class IdGenerator implements Serializable {
+class IdGenerator implements Serializable {
 
     /**
      * Step of generating IDs.
@@ -30,7 +30,7 @@ public class IdGenerator implements Serializable {
      */
     private final Attr idGenElement;
 
-    public IdGenerator(Attr idGenElement) {
+    IdGenerator(Attr idGenElement) {
         this.idGenElement = idGenElement;
         currentId.set(1);
     }
@@ -40,7 +40,7 @@ public class IdGenerator implements Serializable {
      * @param idGenElement XML attribute of value of generator
      * @param seed value to be set.
      */
-    public IdGenerator(Attr idGenElement, Integer seed) {
+    IdGenerator(Attr idGenElement, Integer seed) {
         this(idGenElement);
         currentId.set(seed);
     }
@@ -49,7 +49,7 @@ public class IdGenerator implements Serializable {
      * current free ID and increment ID generator
      * @return free ID number
      */
-    public Integer getNextId() {
+    Integer getNextId() {
         Integer retVal = currentId.getAndAdd(GENERATOR_STEP);
         idGenElement.setValue(currentId.toString());
         return retVal;

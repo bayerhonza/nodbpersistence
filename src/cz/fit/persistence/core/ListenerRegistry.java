@@ -10,12 +10,12 @@ class ListenerRegistry {
 
     private final Map<Class<? extends AbstractEventListener>, AbstractEventListener> listeners = new HashMap<>();
 
-    public <T extends AbstractEventListener> void registerListener(Class<T> listenerClass, T listener) {
+    <T extends AbstractEventListener> void registerListener(Class<T> listenerClass, T listener) {
         listeners.put(listenerClass, listener);
     }
 
     @SuppressWarnings({"unchecked"})
-    public <T extends AbstractEventListener> T findListener(EventTypeToListener<T> eventType) {
+    <T extends AbstractEventListener> T findListener(EventTypeToListener<T> eventType) {
         return (T) listeners.get(eventType.getListenerClass());
     }
 

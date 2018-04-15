@@ -13,7 +13,7 @@ public class PersistenceManagerImpl implements PersistenceManager {
 
     private final PersistenceManagerFactory pmfactory;
 
-    public PersistenceManagerImpl(PersistenceManagerFactory pmfactory) {
+    PersistenceManagerImpl(PersistenceManagerFactory pmfactory) {
         this.pmfactory = pmfactory;
     }
 

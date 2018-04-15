@@ -18,8 +18,4 @@ public class PersistenceManagerFactoryBuilder {
         return new PersistenceManagerFactory(persistenceContext);
     }
 
-    private boolean isRootFsPresent(String rootFsDir) {
-        Path rooFsPath = Paths.get(rootFsDir);
-        return rooFsPath.toFile().exists();
-    }
 }
