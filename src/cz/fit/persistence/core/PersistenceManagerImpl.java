@@ -28,8 +28,9 @@ public class PersistenceManagerImpl implements PersistenceManager {
     }
 
     @Override
-    public Object load(Integer objectId, Class<?> klazz) throws PersistenceException {
-        return launchLoadAction(new LoadEntityEvent(this, objectId, klazz));
+    @SuppressWarnings("unchecked")
+    public <T> T load(Integer objectId, Class<T> klazz) throws PersistenceException {
+        return (T) launchLoadAction(new LoadEntityEvent(this, objectId, klazz));
     }
 
     @Override

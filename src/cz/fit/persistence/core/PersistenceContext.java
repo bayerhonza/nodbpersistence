@@ -33,6 +33,7 @@ public class PersistenceContext {
 
     public static final String XML_ELEMENT_ROOT = "class";
     public static final String XML_ELEMENT_OBJECT = "object";
+    public static final String XML_ELEMENT_ID_GENERATOR = "id_gen";
     public static final String XML_ATTRIBUTE_OBJECT_ID = "id";
     public static final String XML_ATTRIBUTE_CLASS = "name";
 
@@ -117,6 +118,10 @@ public class PersistenceContext {
         return storageContext;
     }
 
+    public Class<?> getClassFromHash(Integer hashCode) {
+        return hashClassMap.get(hashCode);
+    }
+
     private void initStorageContext(String rootDirectory) throws PersistenceCoreException {
         storageContext = new StorageContext(Paths.get(rootDirectory));
         storageContext.init();
@@ -137,7 +142,7 @@ public class PersistenceContext {
     }
 
     private <T> DefaultClassManagerImpl<T> instantiateClassManager(Class<T> tClass, boolean xmlFileExists, ClassFileHandler classFileHandler) {
-        return new DefaultClassManagerImpl<T>(this, tClass, hashClass(tClass), xmlFileExists, classFileHandler);
+        return new DefaultClassManagerImpl<>(this, tClass, hashClass(tClass), xmlFileExists, classFileHandler);
     }
 
     private <T> Integer hashClass(Class<T> objectClass) {

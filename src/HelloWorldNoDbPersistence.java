@@ -44,10 +44,23 @@ class HelloWorldNoDbPersistence {
 
         Test1 test = new Test1();
         test.setNumber(1)
-                .setText("hello")
-                .setTest2(null);
+                .setText("hello");
 
-        Test2 test2 = new Test2();
+        List<List<String >> list = test.getList();
+        List<String> subList = new ArrayList<>();
+        subList.add("afsdfasdf");
+        subList.add("ahoj");
+        subList.add("ccccc");
+        list.add(subList);
+
+
+
+        Test1 test12 = new Test1()
+                .setNumber(32165151)
+                .setText("jin")
+                .setTest1(test);
+
+        /*Test2 test2 = new Test2();
         test2.addToList("ahoj");
 
         Test2 test21 = new Test2();
@@ -56,7 +69,7 @@ class HelloWorldNoDbPersistence {
         List<Test2> nextList = new ArrayList<>();
         nextList.add(test2);
         nextList.add(test21);
-        list.add(nextList);
+        list.add(nextList);*/
 
 
 
@@ -67,7 +80,10 @@ class HelloWorldNoDbPersistence {
                 .setText("asdfasdfasdf")
                 .setTest2(test2);
         */
-        pm.persist(test);
+        pm.persist(test12);
+
+        Test1 test1111 = pm.load(1,Test1.class);
+        System.out.println(test1111);
 
         /*Test1 test_loaded = (Test1) pm.load(1, Test1.class);
         System.out.println(test_loaded.toString());*/

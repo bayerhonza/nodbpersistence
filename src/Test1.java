@@ -14,9 +14,10 @@ public class Test1 {
 
     private int number;
 
-    private Test2 test2;
+    private Test1 test1;
 
-    private List<List<Test2>> list1 = new ArrayList<>();
+
+    private List<List<String>> list = new ArrayList<>();
 
     public int getNumber() {
         return number;
@@ -26,13 +27,18 @@ public class Test1 {
 
     }
 
+
+    public List<List<String>> getList() {
+        return list;
+    }
+
+    public void setList(List<List<String>> list) {
+        this.list = list;
+    }
+
     public Test1 setNumber(int number) {
         this.number = number;
         return this;
-    }
-
-    public List<List<Test2>> getList() {
-        return list1;
     }
 
     public Test1 setText(String text) {
@@ -40,12 +46,12 @@ public class Test1 {
         return this;
     }
 
-    public Test2 getTest2() {
-        return test2;
+    public Test1 getTest1() {
+        return test1;
     }
 
-    public Test1 setTest2(Test2 test2) {
-        this.test2 = test2;
+    public Test1 setTest1(Test1 test2) {
+        this.test1 = test2;
         return this;
     }
 
