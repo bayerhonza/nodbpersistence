@@ -17,7 +17,7 @@ public class Test1 {
     private Test1 test1;
 
 
-    private List<List<String>> list = new ArrayList<>();
+    private List<List<Test2>> list = new ArrayList<>();
 
     public int getNumber() {
         return number;
@@ -28,11 +28,11 @@ public class Test1 {
     }
 
 
-    public List<List<String>> getList() {
+    public List<List<Test2>> getList() {
         return list;
     }
 
-    public void setList(List<List<String>> list) {
+    public void setList(List<List<Test2>> list) {
         this.list = list;
     }
 

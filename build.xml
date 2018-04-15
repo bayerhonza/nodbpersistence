@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<project name="nodbpersistence">
+    <property name="build.dir" value="build/"/>
+    <property name="src.dir" value="src/"/>
+    <property name="lib.dir" value="lib/"/>
+    <property name="dest.dir" value="dest/"/>
+    <property name="persistence.root" value="D:\Documents\FIT\3BIT\IBP\persisted_objects\"/>
+
+    <path id="master-classpath">
+        <fileset dir = "${lib.dir}">
+            <include name="*.jar"/>
+        </fileset>
+    </path>
+
+    <target name="build" description="Builds nodbpersistence project">
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${dest.dir}"/>
+
+        <javac destdir="${build.dir}" source="1.9" target="1.9" includeantruntime="true">
+            <src path="${src.dir}"/>
+            <classpath refid="master-classpath"/>
+            <compilerarg value="-Xlint:unchecked"/>
+        </javac>
+        <jar destfile="${dest.dir}/test.jar" basedir="${build.dir}">
+            <zipgroupfileset dir="${lib.dir}" includes="*.jar"/>
+            <manifest>
+                <attribute name="Main-Class" value="Hello"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="clean">
+        <delete dir="${persistence.root}"/>
+    </target>
+</project>

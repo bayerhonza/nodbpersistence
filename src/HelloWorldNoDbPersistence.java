@@ -5,20 +5,20 @@ import cz.fit.persistence.core.PersistenceSettings;
 import cz.fit.persistence.exceptions.PersistenceCoreException;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 class HelloWorldNoDbPersistence {
 
+    public static final Integer count = 1;
 
     public static void main(String[] args) {
         System.out.println(System.getProperty("user.dir"));
         PersistenceSettings persistenceContextSetting = new PersistenceSettings();
 
         persistenceContextSetting
-                .setRootPath("D:\\Documents\\FIT\\3BIT\\IBP\\persisted_objects")
-                .setCache(100);
+                .setRootPath("D:\\Documents\\FIT\\3BIT\\IBP\\persisted_objects");
         PersistenceManagerFactory persistenceManagerFactory;
         try {
             PersistenceManagerFactoryBuilder builder = new PersistenceManagerFactoryBuilder(persistenceContextSetting);
@@ -29,20 +29,32 @@ class HelloWorldNoDbPersistence {
         }
 
         PersistenceManager pm = persistenceManagerFactory.getPersistenceManager();
-        /*long elapsedTime = 0;
-        for (int i = 0; i < 1000; i++) {
+
+        Test3 test3 = new Test3();
+        Set<Test1> listTest1 = test3.getListTest1();
+        for (int i = 0; i < count; i++) {
             Test1 test = new Test1()
-                    .setNumber(i)
-                    .setText("text: " + i);
-            long before = System.nanoTime();
-            pm.persist(test);
-            elapsedTime += System.nanoTime() - before;
+                    .setNumber(i);
+            listTest1.add(test);
+            List<List<Test2>> list = test.getList();
+            for (int j = 0; j < count; j++) {
+                List<Test2> nextList = new ArrayList<>();
+                list.add(nextList);
+                for (int k = 0; k < count; k++) {
+                    Test2 test2 = new Test2();
+                    test2.getList().add(i + "/" + j + "/" + k);
+                    nextList.add(test2);
+                }
+            }
         }
+        long before = System.nanoTime();
+        pm.persist(test3);
+        long elapsedTime = System.nanoTime() - before;
 
 
-        System.out.println(TimeUnit.NANOSECONDS.toMillis(elapsedTime));*/
+        System.out.println("elapsed time: " + TimeUnit.NANOSECONDS.toMillis(elapsedTime)/1000.0 + "s");
 
-        Test1 test = new Test1();
+        /*Test1 test = new Test1();
         test.setNumber(1)
                 .setText("hello");
 
@@ -80,9 +92,9 @@ class HelloWorldNoDbPersistence {
                 .setText("asdfasdfasdf")
                 .setTest2(test2);
         */
-        pm.persist(test12);
+        //pm.persist(test12);
 
-        Test1 test1111 = pm.load(1,Test1.class);
+        Test3 test1111 = pm.load(1, Test3.class);
         System.out.println(test1111);
 
         /*Test1 test_loaded = (Test1) pm.load(1, Test1.class);

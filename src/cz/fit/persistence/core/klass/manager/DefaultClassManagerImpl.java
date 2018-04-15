@@ -98,7 +98,7 @@ public class DefaultClassManagerImpl<T> {
         try {
             xmlDocument = documentBuilder.parse(fileHandler.getXmlClassFile());
             Element rootElementLocal = xmlDocument.getDocumentElement();
-            if (rootElementLocal.getNodeName() == PersistenceContext.XML_ELEMENT_ROOT) {
+            if (rootElementLocal.getNodeName().equals(PersistenceContext.XML_ELEMENT_ROOT)) {
                 rootElement = rootElementLocal;
                 if (rootElement.hasAttribute(PersistenceContext.XML_ELEMENT_ID_GENERATOR)) {
                     Attr idGenAttr = rootElementLocal.getAttributeNode(PersistenceContext.XML_ELEMENT_ID_GENERATOR);
@@ -118,10 +118,13 @@ public class DefaultClassManagerImpl<T> {
                 }
             }
 
+            normalizeXMLModel();
+
         } catch (SAXException | IOException | XMLParseException e) {
             throw new PersistenceException(e);
         }
     }
+
 
     public Object performLoad(Integer objectId) {
         return (T) getObjectById(objectId);
@@ -147,6 +150,16 @@ public class DefaultClassManagerImpl<T> {
             throw new PersistenceException(e);
         }
         return objectNode;
+    }
+
+    private void normalizeXMLModel() {
+        NodeList nodeList = rootElement.getChildNodes();
+        for (int i = 0; i < nodeList.getLength(); i++) {
+            Node node = nodeList.item(i);
+            if (node.getNodeType() != Node.ELEMENT_NODE) {
+                rootElement.removeChild(node);
+            }
+        }
     }
 
     private void initXMLDocumentBuilder() {
@@ -213,7 +226,7 @@ public class DefaultClassManagerImpl<T> {
     }
 
     private void persistObject(Integer objectId, Object object, PersistenceManager persistenceManager) throws PersistenceException {
-
+        //System.out.println("persisting " + object.getClass().getCanonicalName() + "#" + objectId);
         try {
             // top level XML element <persistedObject>
             Element persistedObject = xmlDocument.createElement(PersistenceContext.XML_ELEMENT_OBJECT);
@@ -355,18 +368,9 @@ public class DefaultClassManagerImpl<T> {
                     if (!xmlElementField.hasAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE)) {
                         throw new PersistenceException("Bad XML. " + PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE + " expected.");
                     }
-                    String[] parsedReference = xmlElementField.getAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE).split("#");
-                    String className = parsedReference[0];
-                    Integer cascadeObjectId = Integer.parseInt(parsedReference[1]);
-                    Class<?> referencedClass = Class.forName(className);
-                    DefaultClassManagerImpl cascadeObjectManager = persistenceContext.findClassManager(referencedClass);
-                    Object cascadeObject = cascadeObjectManager.getObjectById(cascadeObjectId);
+                    Object cascadeObject = getObjectByReference(xmlElementField.getAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE));
                     field.set(newObj, cascadeObject);
                 }
-                /*if (ClassHelper.isSimpleValueType(field.getClass())) {
-                    String fieldValue = xmlField.getFirstChild().getNodeValue();
-                    field.set(newObj, ConvertStringToType.convertStringToType(field.getType(), fieldValue));
-                }*/
                 field.setAccessible(accessibility);
 
             } catch (Exception e) {
@@ -378,7 +382,20 @@ public class DefaultClassManagerImpl<T> {
         return newObj;
     }
 
-    @SuppressWarnings("rawtypes")
+    private Object getObjectByReference(String reference) throws ClassNotFoundException {
+        String[] parsedReference = reference.split("#");
+        String className = parsedReference[0];
+        Integer cascadeObjectId = Integer.parseInt(parsedReference[1]);
+        Class<?> referencedClass = Class.forName(className);
+        if (referencedClass.equals(persistedClass)) {
+            return getObjectById(cascadeObjectId);
+        } else {
+            DefaultClassManagerImpl cascadeObjectManager = persistenceContext.findClassManager(referencedClass);
+            return cascadeObjectManager.getObjectById(cascadeObjectId);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
     private Object loadCollection(Element node) throws Exception {
         Class<?> collectionClass = Class.forName(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS));
         Constructor collectionConstructor = collectionClass.getConstructor();
@@ -389,6 +406,12 @@ public class DefaultClassManagerImpl<T> {
                 continue;
             }
             Element element = (Element) items.item(i);
+            if (element.hasAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE)) {
+                Object cascadeObject = getObjectByReference(element.getAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE));
+                newCollection.add(cascadeObject);
+                continue;
+            }
+
             Class<?> instClass = Class.forName(element.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS));
             if (ClassHelper.isSimpleValueType(instClass)) {
                 String fieldValue = element.getTextContent();
@@ -467,7 +490,7 @@ public class DefaultClassManagerImpl<T> {
         if (objectIdFields.size() > 1) {
             throw new PersistenceException("Multiple ObjectId defined.");
         } else if (objectIdFields.size() == 0) {
-            throw new PersistenceException("No ObjectId defined.");
+            throw new PersistenceException("No ObjectId defined in class " + persistedClass.getCanonicalName() + ".");
         } else {
             objectIdField = objectIdFields.get(0);
         }
@@ -510,7 +533,6 @@ public class DefaultClassManagerImpl<T> {
         Integer objectId = persistenceContext.findClassManager(object.getClass()).getObjectId(object);
 
         Integer hashClass = HashHelper.getHashFromClass(object.getClass());
-        System.out.println(hashClass + "#" + objectId);
         return object.getClass().getCanonicalName() + "#" + objectId;
     }
 }
