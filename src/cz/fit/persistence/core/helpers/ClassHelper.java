@@ -1,8 +1,10 @@
 package cz.fit.persistence.core.helpers;
 
 import cz.fit.persistence.exceptions.PersistenceException;
+import sun.reflect.ReflectionFactory;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URL;
 import java.util.Date;
@@ -57,18 +59,15 @@ public class ClassHelper {
      * @param <T> paramater of class
      * @return object of {@code T} instance
      */
-    public static <T> T instantiateClass(Class<T> klass) {
+    public static <T> Object instantiateClass(Class<T> klass) {
         try {
-            Constructor<T> constructor = klass.getConstructor();
-            boolean accs = constructor.canAccess(null);
-            constructor.setAccessible(true);
-            T newObj = constructor.newInstance();
-            constructor.setAccessible(accs);
-            return newObj;
-        } catch (Exception e) {
-            new PersistenceException(e);
+            ReflectionFactory rf = ReflectionFactory.getReflectionFactory();
+            Constructor objectConstructor = klass.getDeclaredConstructor();
+            Constructor constructor = rf.newConstructorForSerialization(klass,objectConstructor);
+            return constructor.newInstance();
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+            throw new PersistenceException(e);
         }
-        return null;
     }
 
     public static String createReferenceString(Object object, Integer objectId) {

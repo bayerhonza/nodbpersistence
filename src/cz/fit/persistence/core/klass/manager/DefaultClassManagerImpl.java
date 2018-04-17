@@ -316,7 +316,7 @@ public class DefaultClassManagerImpl<T> {
         if (objectNode == null) {
             throw new PersistenceException("Object with ID not found.");
         }
-        T newObj = ClassHelper.instantiateClass(persistedClass);
+        Object newObj = ClassHelper.instantiateClass(persistedClass);
         persistenceContext.registerTempReference(ClassHelper.createReferenceString(newObj,objectId),newObj);
 
         // setting of objectID

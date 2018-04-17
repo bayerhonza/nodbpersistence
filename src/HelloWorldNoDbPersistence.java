@@ -4,7 +4,10 @@ import cz.fit.persistence.core.PersistenceManagerFactoryBuilder;
 import cz.fit.persistence.core.PersistenceSettings;
 import cz.fit.persistence.exceptions.PersistenceCoreException;
 import org.junit.jupiter.api.Test;
+import sun.reflect.ReflectionFactory;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -53,7 +56,7 @@ class HelloWorldNoDbPersistence {
         pm.persist(test3);
         long elapsedTime = System.nanoTime() - before;*/
 
-        Test1 test1 = new Test1();
+        Test1 test1 = new Test1("test11");
         test1.setText("test11");
         test1.setTest1(test1);
 
@@ -75,6 +78,7 @@ class HelloWorldNoDbPersistence {
         test1.setSet(setTest2);
         test2.setList(listTest1);
 
+
         pm.persist(test1);
         pm.persist(test2);
 
@@ -82,6 +86,11 @@ class HelloWorldNoDbPersistence {
         Test2 test22 = pm.load(1,Test2.class);
         System.out.println(test11);
         System.out.println(test22);
+
+        Test1 test1a = test11;
+
+
+
 
 
         //System.out.println("elapsed time: " + TimeUnit.NANOSECONDS.toMillis(elapsedTime)/1000.0 + "s");

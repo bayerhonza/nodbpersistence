@@ -24,7 +24,8 @@ public class Test1 {
         return number;
     }
 
-    public Test1() {
+    public Test1(String text) {
+        this.text = text;
 
     }
 
