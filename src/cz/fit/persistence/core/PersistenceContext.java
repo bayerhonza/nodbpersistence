@@ -2,6 +2,7 @@ package cz.fit.persistence.core;
 
 import cz.fit.persistence.annotations.ObjectId;
 import cz.fit.persistence.core.events.EventTypeToListener;
+import cz.fit.persistence.core.helpers.ClassHelper;
 import cz.fit.persistence.core.helpers.HashHelper;
 import cz.fit.persistence.core.klass.manager.DefaultClassManagerImpl;
 import cz.fit.persistence.core.listeners.AbstractEventListener;
@@ -52,6 +53,7 @@ public class PersistenceContext {
     private StorageContext storageContext;
     private final Map<Class<?>, DefaultClassManagerImpl> classClassManagerMap = new HashMap<>();
     private final Map<Integer, Class<?>> hashClassMap = new HashMap<>();
+    private final HashMap<String,Object> referencesCache = new HashMap<>();
 
     /**
      * Constructor for PersistenceContext without predefined properties
@@ -153,6 +155,18 @@ public class PersistenceContext {
         listeners.registerListener(LoadEventListener.class, new LoadEventListener());
     }
 
+    public void registerTempReference(String reference, Object object) {
+        referencesCache.put(reference,object);
+    }
+
+    public Object getObjectByReference(String reference) {
+        return referencesCache.get(reference);
+    }
+
+    public boolean isReferenceRegistered(String reference) {
+        return referencesCache.containsKey(reference);
+    }
+
     public String getReferenceIfPersisted(Object object) {
         DefaultClassManagerImpl defaultClassManager = findClassManager(object.getClass());
         Integer objectId = defaultClassManager.isPersistentOrInProgress(object);
@@ -160,7 +174,7 @@ public class PersistenceContext {
             return null;
         }
         else {
-            return object.getClass().getCanonicalName() + "#" + objectId;
+            return ClassHelper.createReferenceString(object,objectId);
         }
 
     }

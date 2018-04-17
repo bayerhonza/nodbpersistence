@@ -54,15 +54,22 @@ class HelloWorldNoDbPersistence {
         long elapsedTime = System.nanoTime() - before;*/
 
         Test1 test1 = new Test1();
-        test1.setText("test1");
+        test1.setText("test11");
+        test1.setTest1(test1);
 
         Test2 test2 = new Test2();
-        test2.setText("test2");
+        test2.setText("test22");
 
         Set<Test2> setTest2 = new HashSet<>();
         setTest2.add(test2);
+        setTest2.add(test2);
+        setTest2.add(test2);
+        setTest2.add(test2);
 
         List<Test1> listTest1 = new ArrayList<>();
+        listTest1.add(test1);
+        listTest1.add(test1);
+        listTest1.add(test1);
         listTest1.add(test1);
 
         test1.setSet(setTest2);
@@ -72,7 +79,9 @@ class HelloWorldNoDbPersistence {
         pm.persist(test2);
 
         Test1 test11 = pm.load(1,Test1.class);
+        Test2 test22 = pm.load(1,Test2.class);
         System.out.println(test11);
+        System.out.println(test22);
 
 
         //System.out.println("elapsed time: " + TimeUnit.NANOSECONDS.toMillis(elapsedTime)/1000.0 + "s");

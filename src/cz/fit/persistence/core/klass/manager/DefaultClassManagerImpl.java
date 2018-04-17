@@ -6,7 +6,6 @@ import cz.fit.persistence.core.PersistenceManager;
 import cz.fit.persistence.core.events.PersistEntityEvent;
 import cz.fit.persistence.core.helpers.ClassHelper;
 import cz.fit.persistence.core.helpers.ConvertStringToType;
-import cz.fit.persistence.core.helpers.HashHelper;
 import cz.fit.persistence.core.storage.ClassFileHandler;
 import cz.fit.persistence.core.storage.XMLParseException;
 import cz.fit.persistence.exceptions.PersistenceException;
@@ -97,8 +96,8 @@ public class DefaultClassManagerImpl<T> {
                     persistedObjects.put(objectId, node);
                 }
             }
-
             normalizeXMLModel();
+
 
         } catch (SAXException | IOException | XMLParseException e) {
             throw new PersistenceException(e);
@@ -182,7 +181,7 @@ public class DefaultClassManagerImpl<T> {
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
         try {
             transformer = transformerFactory.newTransformer();
-            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+            //transformer.setOutputProperty(OutputKeys.INDENT, "yes");
         } catch (TransformerConfigurationException e) {
             throw new PersistenceException(e);
         }
@@ -197,7 +196,7 @@ public class DefaultClassManagerImpl<T> {
                 if (field.isAnnotationPresent(ObjectId.class)) {
                     continue;
                 }
-                Node node = getObjectAttributByName(objectId, field.getName());
+                Node node = getObjectAttributeByName(objectId, field.getName());
                 try {
                     // TODO update collections and non primitive types
                     boolean accessible = field.canAccess(object);
@@ -304,7 +303,7 @@ public class DefaultClassManagerImpl<T> {
 
     }
 
-    private Node getObjectAttributByName(Integer objectId, String name) {
+    private Node getObjectAttributeByName(Integer objectId, String name) {
         String query = "/" + PersistenceContext.XML_ELEMENT_ROOT + "/"
                 + PersistenceContext.XML_ELEMENT_OBJECT + "[@" + PersistenceContext.XML_ATTRIBUTE_OBJECT_ID + "=" + objectId + "]/"
                 + PersistenceContext.XML_ATTRIBUTE_FIELD + "[@" + PersistenceContext.XML_ATTRIBUTE_FIELD_NAME + "=\"" + name + "\"]";
@@ -318,6 +317,7 @@ public class DefaultClassManagerImpl<T> {
             throw new PersistenceException("Object with ID not found.");
         }
         T newObj = ClassHelper.instantiateClass(persistedClass);
+        persistenceContext.registerTempReference(ClassHelper.createReferenceString(newObj,objectId),newObj);
 
         // setting of objectID
         try {
@@ -376,6 +376,9 @@ public class DefaultClassManagerImpl<T> {
     }
 
     private Object getObjectByReference(String reference) throws ClassNotFoundException {
+        if (persistenceContext.isReferenceRegistered(reference)) {
+            return persistenceContext.getObjectByReference(reference);
+        }
         String[] parsedReference = reference.split("#");
         String className = parsedReference[0];
         Integer cascadeObjectId = Integer.parseInt(parsedReference[1]);

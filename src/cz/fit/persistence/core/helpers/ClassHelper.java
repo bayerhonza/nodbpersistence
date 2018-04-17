@@ -70,4 +70,8 @@ public class ClassHelper {
         }
         return null;
     }
+
+    public static String createReferenceString(Object object, Integer objectId) {
+        return object.getClass().getCanonicalName() + "#" + objectId;
+    }
 }
