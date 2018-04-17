@@ -1,6 +1,7 @@
 import cz.fit.persistence.annotations.ObjectId;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -17,7 +18,7 @@ public class Test1 {
     private Test1 test1;
 
 
-    private List<List<Test2>> list = new ArrayList<>();
+    private Set<Test2> set = new HashSet<>();
 
     public int getNumber() {
         return number;
@@ -28,12 +29,12 @@ public class Test1 {
     }
 
 
-    public List<List<Test2>> getList() {
-        return list;
+    public Set<Test2> getSet() {
+        return set;
     }
 
-    public void setList(List<List<Test2>> list) {
-        this.list = list;
+    public void setSet(Set<Test2> set) {
+        this.set = set;
     }
 
     public Test1 setNumber(int number) {

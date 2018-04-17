@@ -7,22 +7,29 @@ class Test2 {
 
     @ObjectId
     private Integer objectId;
-    private List<String> list = new ArrayList<>();
+    private List<Test1> list = new ArrayList<>();
+
+
+
+    private String text;
 
     public Test2() {
     }
 
-    ;
-
-    public void setList(List<String> list) {
+    public void setList(List<Test1> list) {
         this.list = list;
     }
 
-    public List<String> getList() {
+    public List<Test1> getList() {
         return list;
     }
 
-    public void addToList(String string) {
-        list.add(string);
+    public String getText() {
+        return text;
     }
+
+    public void setText(String text) {
+        this.text = text;
+    }
+
 }

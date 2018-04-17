@@ -1,5 +1,6 @@
 package cz.fit.persistence.core;
 
+import cz.fit.persistence.annotations.ObjectId;
 import cz.fit.persistence.core.events.EventTypeToListener;
 import cz.fit.persistence.core.helpers.HashHelper;
 import cz.fit.persistence.core.klass.manager.DefaultClassManagerImpl;
@@ -11,6 +12,7 @@ import cz.fit.persistence.core.storage.ClassFileHandler;
 import cz.fit.persistence.core.storage.StorageContext;
 import cz.fit.persistence.exceptions.PersistenceCoreException;
 import cz.fit.persistence.exceptions.PersistenceException;
+import org.w3c.dom.Node;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -149,5 +151,17 @@ public class PersistenceContext {
         listeners.registerListener(PersistEventListener.class, new PersistEventListener());
         listeners.registerListener(UpdateEventListener.class, new UpdateEventListener());
         listeners.registerListener(LoadEventListener.class, new LoadEventListener());
+    }
+
+    public String getReferenceIfPersisted(Object object) {
+        DefaultClassManagerImpl defaultClassManager = findClassManager(object.getClass());
+        Integer objectId = defaultClassManager.isPersistentOrInProgress(object);
+        if (objectId == null) {
+            return null;
+        }
+        else {
+            return object.getClass().getCanonicalName() + "#" + objectId;
+        }
+
     }
 }

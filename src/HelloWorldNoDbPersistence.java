@@ -3,8 +3,10 @@ import cz.fit.persistence.core.PersistenceManagerFactory;
 import cz.fit.persistence.core.PersistenceManagerFactoryBuilder;
 import cz.fit.persistence.core.PersistenceSettings;
 import cz.fit.persistence.exceptions.PersistenceCoreException;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -30,7 +32,7 @@ class HelloWorldNoDbPersistence {
 
         PersistenceManager pm = persistenceManagerFactory.getPersistenceManager();
 
-        Test3 test3 = new Test3();
+        /*Test3 test3 = new Test3();
         Set<Test1> listTest1 = test3.getListTest1();
         for (int i = 0; i < count; i++) {
             Test1 test = new Test1()
@@ -49,10 +51,31 @@ class HelloWorldNoDbPersistence {
         }
         long before = System.nanoTime();
         pm.persist(test3);
-        long elapsedTime = System.nanoTime() - before;
+        long elapsedTime = System.nanoTime() - before;*/
+
+        Test1 test1 = new Test1();
+        test1.setText("test1");
+
+        Test2 test2 = new Test2();
+        test2.setText("test2");
+
+        Set<Test2> setTest2 = new HashSet<>();
+        setTest2.add(test2);
+
+        List<Test1> listTest1 = new ArrayList<>();
+        listTest1.add(test1);
+
+        test1.setSet(setTest2);
+        test2.setList(listTest1);
+
+        pm.persist(test1);
+        pm.persist(test2);
+
+        Test1 test11 = pm.load(1,Test1.class);
+        System.out.println(test11);
 
 
-        System.out.println("elapsed time: " + TimeUnit.NANOSECONDS.toMillis(elapsedTime)/1000.0 + "s");
+        //System.out.println("elapsed time: " + TimeUnit.NANOSECONDS.toMillis(elapsedTime)/1000.0 + "s");
 
         /*Test1 test = new Test1();
         test.setNumber(1)
@@ -94,8 +117,8 @@ class HelloWorldNoDbPersistence {
         */
         //pm.persist(test12);
 
-        Test3 test1111 = pm.load(1, Test3.class);
-        System.out.println(test1111);
+        /*Test3 test1111 = pm.load(1, Test3.class);
+        System.out.println(test1111);*/
 
         /*Test1 test_loaded = (Test1) pm.load(1, Test1.class);
         System.out.println(test_loaded.toString());*/

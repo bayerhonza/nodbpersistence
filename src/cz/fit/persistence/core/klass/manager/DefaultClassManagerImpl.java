@@ -25,10 +25,7 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -46,6 +43,7 @@ public class DefaultClassManagerImpl<T> {
 
 
     private HashMap<Integer, Node> persistedObjects = new HashMap<>();
+    private Set<Integer> objectsInProgress = new HashSet<>();
     private IdGenerator idGenerator;
 
 
@@ -108,6 +106,19 @@ public class DefaultClassManagerImpl<T> {
     }
 
 
+    public Integer isPersistentOrInProgress(Object object) {
+        Integer objectId = getObjectId(object);
+        if (isAlreadyPersisted(objectId)) {
+            if (checkIfDirty(objectId, object)) {
+                updateObject(objectId, object);
+            }
+            return objectId;
+        } else if (objectsInProgress.contains(objectId)) {
+            return objectId;
+        } else {
+            return null;
+        }
+    }
     public Object performLoad(Integer objectId) {
         return getObjectById(objectId);
     }
@@ -134,6 +145,9 @@ public class DefaultClassManagerImpl<T> {
         return objectNode;
     }
 
+    /**
+     * Delete whitespace nodes from XML.
+     */
     private void normalizeXMLModel() {
         NodeList nodeList = rootElement.getChildNodes();
         for (int i = 0; i < nodeList.getLength(); i++) {
@@ -208,6 +222,7 @@ public class DefaultClassManagerImpl<T> {
             // top level XML element <persistedObject>
             Element persistedObject = xmlDocument.createElement(PersistenceContext.XML_ELEMENT_OBJECT);
             rootElement.appendChild(persistedObject);
+            objectsInProgress.add(objectId);
 
             // attribute of top level XML element with objectId
             persistedObject.setAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID, objectId.toString());
@@ -235,6 +250,7 @@ public class DefaultClassManagerImpl<T> {
 
                 field.setAccessible(accessible);
             }
+            objectsInProgress.remove(objectId);
             persistedObjects.put(objectId, persistedObject);
             flushXMLDocument();
 
@@ -283,7 +299,7 @@ public class DefaultClassManagerImpl<T> {
         }
     }
 
-    private Node getObjectNodeById(Integer objectId) {
+    public Node getObjectNodeById(Integer objectId) {
         return queryXMLModel("/" + PersistenceContext.XML_ELEMENT_ROOT + "/" + PersistenceContext.XML_ELEMENT_OBJECT + "[@" + PersistenceContext.XML_ATTRIBUTE_OBJECT_ID + "=" + objectId + "]");
 
     }
@@ -500,8 +516,13 @@ public class DefaultClassManagerImpl<T> {
     }
 
     private String startCascade(Object object, PersistenceManager persistenceManager) {
-        persistenceManager.persist(object);
-        Integer objectId = persistenceContext.findClassManager(object.getClass()).getObjectId(object);
-        return object.getClass().getCanonicalName() + "#" + objectId;
+        String reference = persistenceContext.getReferenceIfPersisted(object);
+        if (reference == null) {
+            persistenceManager.persist(object);
+            Integer objectId = persistenceContext.findClassManager(object.getClass()).getObjectId(object);
+            return object.getClass().getCanonicalName() + "#" + objectId;
+        } else {
+            return reference;
+        }
     }
 }
