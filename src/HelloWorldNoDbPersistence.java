@@ -2,17 +2,15 @@ import cz.fit.persistence.core.PersistenceManager;
 import cz.fit.persistence.core.PersistenceManagerFactory;
 import cz.fit.persistence.core.PersistenceManagerFactoryBuilder;
 import cz.fit.persistence.core.PersistenceSettings;
+import cz.fit.persistence.core.helpers.ClassHelper;
 import cz.fit.persistence.exceptions.PersistenceCoreException;
-import org.junit.jupiter.api.Test;
-import sun.reflect.ReflectionFactory;
+import org.w3c.dom.Text;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 class HelloWorldNoDbPersistence {
 
@@ -56,7 +54,7 @@ class HelloWorldNoDbPersistence {
         pm.persist(test3);
         long elapsedTime = System.nanoTime() - before;*/
 
-        Test1 test1 = new Test1("test11");
+        /*Test1 test1 = new Test1("test11");
         test1.setText("test11");
         test1.setTest1(test1);
 
@@ -87,10 +85,42 @@ class HelloWorldNoDbPersistence {
         System.out.println(test11);
         System.out.println(test22);
 
-        Test1 test1a = test11;
+        Test1 test1a = test11;*/
 
+        System.out.println(System.getProperty("java.vm.name"));
+        System.out.println(System.getProperty("java.home"));
+        System.out.println(System.getProperty("java.vendor"));
+        System.out.println(System.getProperty("java.version"));
+        System.out.println(System.getProperty("java.specification.vendor"));
 
+        Test3 test3inheritance = (Test3) ClassHelper.instantiateClass(Test3.class);
 
+        System.out.println(System.identityHashCode(test3inheritance));
+        test3inheritance.objectId = "aaaaa";
+        ((Test1) test3inheritance).objectId = "bbbbbb";
+        System.out.println(test3inheritance.objectId);
+        System.out.println(((Test1) test3inheritance).objectId);
+
+        List<Field> fields = new ArrayList<>();
+        Class<?> klazz = Test3.class;
+        while (klazz != Object.class) {
+            fields.addAll(Arrays.asList(klazz.getDeclaredFields()));
+            klazz = klazz.getSuperclass();
+        }
+        fields.forEach(field -> {
+            try {
+                field.setAccessible(true);
+                String fieldName = field.getName();
+                Class<?> type = field.getType();
+                if (fieldName.equals("objectId") && type == String.class) {
+                    String str = "jjjjj";
+                    field.set(test3inheritance, str);
+                }
+                System.out.println(field.getDeclaringClass() + ":" + field.getType() + ":" + field.getName() + "=" + field.get(test3inheritance) == null ? "null" : field.get(test3inheritance).toString());
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        });
 
 
         //System.out.println("elapsed time: " + TimeUnit.NANOSECONDS.toMillis(elapsedTime)/1000.0 + "s");

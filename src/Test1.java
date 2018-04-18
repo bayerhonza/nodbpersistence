@@ -9,7 +9,7 @@ import java.util.Set;
 public class Test1 {
 
     @ObjectId
-    private int objectId;
+    public String objectId;
 
     private String text;
 
