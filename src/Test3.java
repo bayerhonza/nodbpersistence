@@ -4,16 +4,26 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class Test3 extends Test1 {
+public class Test3 extends Test2 {
 
     @ObjectId
-    public String objectId;
+    public Long objectId;
 
-    public Test3() {
-        super("asdfasdf");
+    public Set<Test1> listTest1 = new HashSet<>();
+
+    public Test3(String string) {
+        super(string);
     }
 
-    private Set<Test1> listTest1 = new HashSet<>();
+
+    public Set<Test1> getListTest1() {
+        return listTest1;
+    }
+
+    public void setListTest1(Set<Test1> listTest1) {
+        this.listTest1 = listTest1;
+    }
+
 
 
 

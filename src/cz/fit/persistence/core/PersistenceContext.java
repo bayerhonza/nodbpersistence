@@ -36,6 +36,7 @@ public class PersistenceContext {
 
     public static final String XML_ELEMENT_ROOT = "class";
     public static final String XML_ELEMENT_OBJECT = "object";
+    public static final String XML_ELEMENT_INHERITED = "inherited";
     public static final String XML_ELEMENT_ID_GENERATOR = "id_gen";
     public static final String XML_ATTRIBUTE_OBJECT_ID = "id";
     public static final String XML_ATTRIBUTE_CLASS = "name";
@@ -46,6 +47,7 @@ public class PersistenceContext {
     public static final String XML_ATTRIBUTE_FIELD = "field";
     public static final String XML_ATTRIBUTE_FIELD_NAME = "name";
     public static final String XML_ATTRIBUTE_FIELD_REFERENCE = "ref";
+    public static final String XML_ATTRIBUTE_INHERITED_CLASS = "class";
 
     private Properties properties;
 
@@ -169,7 +171,7 @@ public class PersistenceContext {
 
     public String getReferenceIfPersisted(Object object) {
         DefaultClassManagerImpl defaultClassManager = findClassManager(object.getClass());
-        Integer objectId = defaultClassManager.isPersistentOrInProgress(object);
+        Long objectId = defaultClassManager.isPersistentOrInProgress(object);
         if (objectId == null) {
             return null;
         }

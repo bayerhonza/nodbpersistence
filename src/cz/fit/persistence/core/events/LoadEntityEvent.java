@@ -8,16 +8,16 @@ import cz.fit.persistence.core.PersistenceManager;
  */
 public class LoadEntityEvent extends EntityEvent {
 
-    private Integer objectId;
+    private Long objectId;
     private Class<?> klazz;
 
-    public LoadEntityEvent(PersistenceManager source, Integer objectId, Class<?> klazz) {
+    public LoadEntityEvent(PersistenceManager source, Long objectId, Class<?> klazz) {
         super(null, source);
         this.objectId = objectId;
         this.klazz = klazz;
     }
 
-    public Integer getObjectId() {
+    public Long getObjectId() {
         return objectId;
     }
 

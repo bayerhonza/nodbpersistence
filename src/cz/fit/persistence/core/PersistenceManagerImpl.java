@@ -29,7 +29,7 @@ public class PersistenceManagerImpl implements PersistenceManager {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> T load(Integer objectId, Class<T> klazz) throws PersistenceException {
+    public <T> T load(Long objectId, Class<T> klazz) throws PersistenceException {
         return (T) launchLoadAction(new LoadEntityEvent(this, objectId, klazz));
     }
 

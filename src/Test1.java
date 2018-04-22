@@ -9,7 +9,7 @@ import java.util.Set;
 public class Test1 {
 
     @ObjectId
-    public String objectId;
+    public Long objectId;
 
     private String text;
 
@@ -38,23 +38,20 @@ public class Test1 {
         this.set = set;
     }
 
-    public Test1 setNumber(int number) {
+    public void setNumber(int number) {
         this.number = number;
-        return this;
     }
 
-    public Test1 setText(String text) {
+    public void setText(String text) {
         this.text = text;
-        return this;
     }
 
     public Test1 getTest1() {
         return test1;
     }
 
-    public Test1 setTest1(Test1 test2) {
+    public void setTest1(Test1 test2) {
         this.test1 = test2;
-        return this;
     }
 
     public String getText() {

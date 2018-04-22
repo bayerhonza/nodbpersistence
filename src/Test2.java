@@ -3,17 +3,17 @@ import cz.fit.persistence.annotations.ObjectId;
 import java.util.ArrayList;
 import java.util.List;
 
-class Test2 {
+class Test2 extends Test1 {
 
     @ObjectId
-    private Integer objectId;
+    private long objectId;
     private List<Test1> list = new ArrayList<>();
-
-
 
     private String text;
 
-    public Test2() {
+    public Test2(String string) {
+        super(string);
+        list.add(this);
     }
 
     public void setList(List<Test1> list) {

@@ -5,6 +5,7 @@ import org.w3c.dom.Attr;
 import javax.swing.text.Element;
 import java.io.Serializable;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * ID generator used for defining unique ID of ojbects. It is
@@ -23,7 +24,7 @@ class IdGenerator implements Serializable {
     /**
      * The value of first <b>free</b> ID.
      */
-    private final AtomicInteger currentId = new AtomicInteger();
+    private final AtomicLong currentId = new AtomicLong();
     /**
      * Attribut of XML element with ID generator valure. Default value of attribute name is defined in
      * {@link cz.fit.persistence.core.PersistenceContext}.
@@ -49,8 +50,8 @@ class IdGenerator implements Serializable {
      * current free ID and increment ID generator
      * @return free ID number
      */
-    Integer getNextId() {
-        Integer retVal = currentId.getAndAdd(GENERATOR_STEP);
+    Long getNextId() {
+        Long retVal = currentId.getAndAdd(GENERATOR_STEP);
         idGenElement.setValue(currentId.toString());
         return retVal;
     }

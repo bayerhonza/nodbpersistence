@@ -8,7 +8,7 @@ public interface PersistenceManager {
 
     void update(Object object) throws PersistenceException;
 
-    <T> T load(Integer objectId, Class<T> klazz) throws PersistenceException;
+    <T> T load(Long objectId, Class<T> klazz) throws PersistenceException;
 
     PersistenceContext getContext();
 

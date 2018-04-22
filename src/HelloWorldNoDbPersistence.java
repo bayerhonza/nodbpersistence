@@ -96,8 +96,8 @@ class HelloWorldNoDbPersistence {
         Test3 test3inheritance = (Test3) ClassHelper.instantiateClass(Test3.class);
 
         System.out.println(System.identityHashCode(test3inheritance));
-        test3inheritance.objectId = "aaaaa";
-        ((Test1) test3inheritance).objectId = "bbbbbb";
+        //test3inheritance.objectId = "aaaaa";
+        //((Test1) test3inheritance).objectId = "bbbbbb";
         System.out.println(test3inheritance.objectId);
         System.out.println(((Test1) test3inheritance).objectId);
 
