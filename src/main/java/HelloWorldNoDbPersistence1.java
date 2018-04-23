@@ -32,7 +32,7 @@ class HelloWorldNoDbPersistence1 {
         Test3 test3 = new Test3("aaaaaa");
         pm.persist(test3);
 
-        /*Test1 test_loaded = (Test1) pm.load(1, Test1.class);
-        System.out.println(test_loaded.toString());*/
+        Test3 test_loaded = pm.load(1L, Test3.class);
+        System.out.println(test_loaded.toString());
     }
 }

@@ -41,7 +41,6 @@ public class DefaultClassManagerImpl<T> {
     private final PersistenceContext persistenceContext;
 
     private final Class<T> persistedClass;
-    private final LinkedList<List<Field>> inheratedClasses;
 
     private final Field objectIdField;
 
@@ -66,8 +65,6 @@ public class DefaultClassManagerImpl<T> {
         this.persistedClass = persistedClass;
         this.fileHandler = classFileHandler;
         this.objectIdField = getObjectIdField();
-
-        this.inheratedClasses = getInheritedClassAndFields(persistedClass);
         if (!xmlFileExists) {
             initXMLDocument(persistedClass);
             initXMLTransformer();
@@ -109,22 +106,6 @@ public class DefaultClassManagerImpl<T> {
             throw new PersistenceException(e);
         }
     }
-
-    private LinkedList<List<Field>> getInheritedClassAndFields(Class<?> baseClass) {
-        LinkedList<List<Field>> linkedList = new LinkedList<>();
-        Class<?> inheritedClass = persistedClass.getSuperclass();
-        if (inheritedClass.equals(Object.class)) {
-            return null;
-        } else {
-            // inheritance
-            while (!inheritedClass.equals(Object.class)) {
-                linkedList.add(Arrays.asList(inheritedClass.getDeclaredFields()));
-                inheritedClass = inheritedClass.getSuperclass();
-            }
-        }
-        return linkedList;
-    }
-
 
     public Long isPersistentOrInProgress(Object object) {
         Long objectId = getObjectId(object);
@@ -375,8 +356,24 @@ public class DefaultClassManagerImpl<T> {
         }
 
         // setting of all the other attributes
+        Field[] classFields = persistedClass.getDeclaredFields();
+
         NodeList fields = objectNode.getChildNodes();
-        for (int i = 0; i < fields.getLength(); i++) {
+        for (Field field: classFields) {
+            Element fieldXmlElement = getElementByAtribute(fields,PersistenceContext.XML_ATTRIBUTE_FIELD_NAME,field.getName());
+
+            try {
+                boolean accessibility = field.canAccess(newObj);
+                field.setAccessible(true);
+
+                // TODO support collections and non primitive types
+                setFieldValue(fieldXmlElement,field,newObj);
+                field.setAccessible(accessibility);
+            }catch (Exception e) {
+                throw new PersistenceException(e);
+            }
+        }
+        /*for (int i = 0; i < fields.getLength(); i++) {
             Node xmlField = fields.item(i);
             if (xmlField.getNodeType() != Node.ELEMENT_NODE) {
                 continue;
@@ -389,19 +386,18 @@ public class DefaultClassManagerImpl<T> {
                 field.setAccessible(true);
 
                 // TODO support collections and non primitive types
-                setFieldsValues(xmlElementField,field,newObj);
+                setFieldValue(xmlElementField,field,newObj);
                 field.setAccessible(accessibility);
 
             } catch (Exception e) {
                 throw new PersistenceException(e);
             }
+            */
 
-
-        }
         return newObj;
     }
 
-    private void setFieldsValues(Element fieldXmlElement, Field field, Object newObject) {
+    private void setFieldValue(Element fieldXmlElement, Field field, Object newObject) {
         try {
             if (fieldXmlElement.hasAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL)) {
                 field.set(newObject, null);
@@ -570,6 +566,21 @@ public class DefaultClassManagerImpl<T> {
         }
     }
 
+    private Element getElementByAtribute(NodeList nodeList, String atributeName, String atributeValue) {
+        for (int i=0; i <nodeList.getLength(); i++) {
+            Node xmlField = nodeList.item(i);
+            if (xmlField.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
+            Element xmlElementField = (Element) xmlField;
+
+            Attr attribute = xmlElementField.getAttributeNode(atributeName);
+            if (attribute != null && attribute.getTextContent().equals(atributeName)) {
+                return xmlElementField;
+            }
+        }
+        return null;
+    }
     private String startCascade(Object object, PersistenceManager persistenceManager) {
         String reference = persistenceContext.getReferenceIfPersisted(object);
         if (reference == null) {

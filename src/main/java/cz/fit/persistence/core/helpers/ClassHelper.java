@@ -7,6 +7,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
 
@@ -62,10 +63,9 @@ public class ClassHelper {
     public static <T> Object instantiateClass(Class<T> klass) {
         try {
             ReflectionFactory rf = ReflectionFactory.getReflectionFactory();
-            Constructor objectConstructor = klass.getDeclaredConstructor();
-            Constructor constructor = rf.newConstructorForSerialization(klass,objectConstructor);
+            Constructor constructor = rf.newConstructorForSerialization(klass);
             return constructor.newInstance();
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException  e) {
             throw new PersistenceException(e);
         }
     }
