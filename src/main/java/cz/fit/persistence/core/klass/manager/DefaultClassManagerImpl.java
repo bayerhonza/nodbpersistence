@@ -9,6 +9,8 @@ import cz.fit.persistence.core.helpers.ConvertStringToType;
 import cz.fit.persistence.core.storage.ClassFileHandler;
 import cz.fit.persistence.core.storage.XMLParseException;
 import cz.fit.persistence.exceptions.PersistenceException;
+import org.objenesis.ObjenesisStd;
+import org.objenesis.instantiator.ObjectInstantiator;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
@@ -41,6 +43,7 @@ public class DefaultClassManagerImpl<T> {
     private final PersistenceContext persistenceContext;
 
     private final Class<T> persistedClass;
+    private final ObjectInstantiator objectInstantiator;
 
     private final Field objectIdField;
 
@@ -65,6 +68,7 @@ public class DefaultClassManagerImpl<T> {
         this.persistedClass = persistedClass;
         this.fileHandler = classFileHandler;
         this.objectIdField = getObjectIdField();
+        this.objectInstantiator = new ObjenesisStd().getInstantiatorOf(persistedClass);
         if (!xmlFileExists) {
             initXMLDocument(persistedClass);
             initXMLTransformer();
@@ -339,7 +343,8 @@ public class DefaultClassManagerImpl<T> {
         if (objectNode == null) {
             throw new PersistenceException("Object with ID not found.");
         }
-        Object newObj = ClassHelper.instantiateClass(persistedClass);
+
+        Object newObj = objectInstantiator.newInstance();
         persistenceContext.registerTempReference(ClassHelper.createReferenceString(newObj, objectId), newObj);
 
         // setting of objectID

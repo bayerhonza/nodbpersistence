@@ -1,6 +1,8 @@
 package cz.fit.persistence.core.helpers;
 
 import cz.fit.persistence.exceptions.PersistenceException;
+import org.objenesis.Objenesis;
+import org.objenesis.ObjenesisStd;
 import sun.reflect.ReflectionFactory;
 
 import java.lang.reflect.Constructor;
@@ -61,10 +63,12 @@ public class ClassHelper {
      * @return object of {@code T} instance
      */
     public static <T> Object instantiateClass(Class<T> klass) {
+        Objenesis objenesis = new ObjenesisStd(true);
+
         try {
             ReflectionFactory rf = ReflectionFactory.getReflectionFactory();
-            Constructor constructor = rf.newConstructorForSerialization(klass);
-            return constructor.newInstance();
+            Constructor noArgConstrutor = rf.newConstructorForSerialization(klass);
+            return noArgConstrutor.newInstance();
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException  e) {
             throw new PersistenceException(e);
         }
