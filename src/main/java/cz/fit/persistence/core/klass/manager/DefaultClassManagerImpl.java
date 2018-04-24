@@ -6,6 +6,8 @@ import cz.fit.persistence.core.PersistenceManager;
 import cz.fit.persistence.core.events.PersistEntityEvent;
 import cz.fit.persistence.core.helpers.ClassHelper;
 import cz.fit.persistence.core.helpers.ConvertStringToType;
+import cz.fit.persistence.core.helpers.XmlException;
+import cz.fit.persistence.core.helpers.XmlHelper;
 import cz.fit.persistence.core.storage.ClassFileHandler;
 import cz.fit.persistence.core.storage.XMLParseException;
 import cz.fit.persistence.exceptions.PersistenceException;
@@ -236,21 +238,13 @@ public class DefaultClassManagerImpl<T> {
             Field[] fields = object.getClass().getDeclaredFields();
             Class<?> inheritedClass = object.getClass().getSuperclass();
 
-            if (inheritedClass != null) {
+            // create inherited class element
+            if (!inheritedClass.equals(Object.class)) {
                 // inheritance
                 Element inheritedXmlElement = xmlDocument.createElement(PersistenceContext.XML_ELEMENT_INHERITED);
                 persistedObjectElement.appendChild(inheritedXmlElement);
-                while (!inheritedClass.equals(Object.class)) {
-                    // get superclass fields
-                    Field[] inheritedClassFields = inheritedClass.getDeclaredFields();
-                    Element inheritedClassXmlElement = xmlDocument.createElement(PersistenceContext.XML_ATTRIBUTE_INHERITED_CLASS);
-                    inheritedXmlElement.appendChild(inheritedClassXmlElement);
-                    // write superclass name
-                    inheritedClassXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_NAME, inheritedClass.getCanonicalName());
-                    // create XML elements for superclass fields
-                    createFieldsXML(inheritedClassFields, inheritedClassXmlElement, object, persistenceManager);
-                    inheritedClass = inheritedClass.getSuperclass();
-                }
+                createInheritedClassXml(inheritedClass, inheritedXmlElement, object, persistenceManager);
+
             }
             createFieldsXML(fields, persistedObjectElement, object, persistenceManager);
 
@@ -260,6 +254,21 @@ public class DefaultClassManagerImpl<T> {
         } catch (IllegalAccessException | FileNotFoundException | TransformerException e) {
             throw new PersistenceException(e);
         }
+    }
+
+    private void createInheritedClassXml(Class<?> inheritedClass, Element rootElement, Object object, PersistenceManager persistenceManager) throws IllegalAccessException {
+
+        // get superclass fields
+        Element inheritedClassXmlElement = xmlDocument.createElement(PersistenceContext.XML_ATTRIBUTE_INHERITED_CLASS);
+        rootElement.appendChild(inheritedClassXmlElement);
+        if (!inheritedClass.getSuperclass().equals(Object.class)) {
+            createInheritedClassXml(inheritedClass.getSuperclass(), inheritedClassXmlElement, object, persistenceManager);
+        }
+        // write superclass name
+        inheritedClassXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_NAME, inheritedClass.getCanonicalName());
+        // create XML elements for superclass fields
+        Field[] inheritedClassFields = inheritedClass.getDeclaredFields();
+        createFieldsXML(inheritedClassFields, inheritedClassXmlElement, object, persistenceManager);
     }
 
     private void createFieldsXML(Field[] fields,
@@ -325,12 +334,18 @@ public class DefaultClassManagerImpl<T> {
         }
     }
 
-    public Node getObjectNodeById(Long objectId) {
-        return queryXMLModel("/" + PersistenceContext.XML_ELEMENT_ROOT + "/" + PersistenceContext.XML_ELEMENT_OBJECT + "[@" + PersistenceContext.XML_ATTRIBUTE_OBJECT_ID + "=" + objectId + "]");
+    public Element getObjectNodeById(Long objectId) {
+        Node node = queryXMLModel("/" + PersistenceContext.XML_ELEMENT_ROOT + "/" + PersistenceContext.XML_ELEMENT_OBJECT + "[@" + PersistenceContext.XML_ATTRIBUTE_OBJECT_ID + "=" + objectId + "]");
+        if (node instanceof Element) {
+            return (Element) node;
+        } else {
+            throw new PersistenceException("Object node with ObjectId " + objectId + "not found.");
+        }
 
     }
 
     private Node getObjectAttributeByName(Long objectId, String name) {
+        // XPath query "/
         String query = "/" + PersistenceContext.XML_ELEMENT_ROOT + "/"
                 + PersistenceContext.XML_ELEMENT_OBJECT + "[@" + PersistenceContext.XML_ATTRIBUTE_OBJECT_ID + "=" + objectId + "]/"
                 + PersistenceContext.XML_ATTRIBUTE_FIELD + "[@" + PersistenceContext.XML_ATTRIBUTE_FIELD_NAME + "=\"" + name + "\"]";
@@ -339,87 +354,92 @@ public class DefaultClassManagerImpl<T> {
     }
 
     private Object getObjectById(Long objectId) {
-        Node objectNode = getObjectNodeById(objectId);
-        if (objectNode == null) {
-            throw new PersistenceException("Object with ID not found.");
-        }
+        Element objectElement = getObjectNodeById(objectId);
 
         Object newObj = objectInstantiator.newInstance();
         persistenceContext.registerTempReference(ClassHelper.createReferenceString(newObj, objectId), newObj);
 
         // setting of objectID
         try {
-            boolean accessibilityId = objectIdField.canAccess(newObj);
+            setObjectId(newObj, objectElement);
 
+            // NodeList of <inherited> elements
+            NodeList inheritedNodeList = objectElement.getElementsByTagName(PersistenceContext.XML_ELEMENT_INHERITED);
+            // nodelist should contain just 1 <inherited> element.
+            if (inheritedNodeList.getLength() != 1) {
+                throw new PersistenceException("Inheritance error.");
+            }
+            // get nodelist of
+            Node inheritedClassXmlField = inheritedNodeList.item(0);
+            Class<?> inheritedClass = persistedClass.getSuperclass();
+            if (!inheritedClass.equals(Object.class)) {
+                Element firstSuperClassXmlElement = XmlHelper.getChildByNameAndAttribute(inheritedClassXmlField, PersistenceContext.XML_ATTRIBUTE_INHERITED_CLASS, PersistenceContext.XML_ATTRIBUTE_FIELD_NAME, inheritedClass.getName());
+                setInheritedFields(inheritedClass, newObj, firstSuperClassXmlElement);
+            }
+
+            Field[] classFields = persistedClass.getDeclaredFields();
+            setFieldValue(objectElement, classFields, newObj);
+
+            return newObj;
+        } catch (XmlException e) {
+            throw new PersistenceException(e);
+        }
+    }
+
+    private void setObjectId(Object newObj, Element objectXmlElement) {
+        try {
+            boolean accessibilityId = objectIdField.canAccess(newObj);
             objectIdField.setAccessible(true);
             Type typeId = objectIdField.getType();
-            String idToString = objectNode.getAttributes().getNamedItem(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID).getNodeValue();
+            String idToString = objectXmlElement.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID);
             objectIdField.set(newObj, ConvertStringToType.convertStringToType(typeId, idToString));
             objectIdField.setAccessible(accessibilityId);
         } catch (IllegalAccessException e) {
             throw new PersistenceException(e);
         }
-
-        // setting of all the other attributes
-        Field[] classFields = persistedClass.getDeclaredFields();
-
-        NodeList fields = objectNode.getChildNodes();
-        for (Field field: classFields) {
-            Element fieldXmlElement = getElementByAtribute(fields,PersistenceContext.XML_ATTRIBUTE_FIELD_NAME,field.getName());
-
-            try {
-                boolean accessibility = field.canAccess(newObj);
-                field.setAccessible(true);
-
-                // TODO support collections and non primitive types
-                setFieldValue(fieldXmlElement,field,newObj);
-                field.setAccessible(accessibility);
-            }catch (Exception e) {
-                throw new PersistenceException(e);
-            }
-        }
-        /*for (int i = 0; i < fields.getLength(); i++) {
-            Node xmlField = fields.item(i);
-            if (xmlField.getNodeType() != Node.ELEMENT_NODE) {
-                continue;
-            }
-            Element xmlElementField = (Element) xmlField;
-            String fieldName = xmlField.getAttributes().getNamedItem(PersistenceContext.XML_ATTRIBUTE_FIELD_NAME).getNodeValue();
-            try {
-                Field field = persistedClass.getDeclaredField(fieldName);
-                boolean accessibility = field.canAccess(newObj);
-                field.setAccessible(true);
-
-                // TODO support collections and non primitive types
-                setFieldValue(xmlElementField,field,newObj);
-                field.setAccessible(accessibility);
-
-            } catch (Exception e) {
-                throw new PersistenceException(e);
-            }
-            */
-
-        return newObj;
     }
 
-    private void setFieldValue(Element fieldXmlElement, Field field, Object newObject) {
-        try {
-            if (fieldXmlElement.hasAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL)) {
-                field.set(newObject, null);
-            } else if (ClassHelper.isSimpleValueType(field.getType())) {
-                String fieldValue = fieldXmlElement.getTextContent();
-                field.set(newObject, ConvertStringToType.convertStringToType(field.getType(), fieldValue));
-            } else if (Collection.class.isAssignableFrom(field.getType())) {
-                Collection newCollection = (Collection) loadCollection(fieldXmlElement);
-                field.set(newObject, newCollection);
-            } else {
-                // cascade
+    private void setInheritedFields(Class<?> inheritedClass, Object newObj, Element classXmlElement) throws XmlException {
+        Class<?> nextSuperclass = inheritedClass.getSuperclass();
+        if (!nextSuperclass.equals(Object.class)) {
+            Element nextSuperClassXmlElement = XmlHelper.getChildByNameAndAttribute(classXmlElement, PersistenceContext.XML_ATTRIBUTE_INHERITED_CLASS, PersistenceContext.XML_ATTRIBUTE_FIELD_NAME, nextSuperclass.getName());
+            setInheritedFields(nextSuperclass, newObj, nextSuperClassXmlElement);
+        }
+        Field[] inheritedFields = inheritedClass.getDeclaredFields();
+        setFieldValue(classXmlElement, inheritedFields, newObj);
+    }
 
-                if (!fieldXmlElement.hasAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE)) {
-                    throw new PersistenceException("Bad XML. " + PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE + " expected.");
+    private void setFieldValue(Element parent, Field[] classFields, Object newObject) {
+        try {
+            for (Field field : classFields) {
+
+                if (field.isAnnotationPresent(ObjectId.class)) {
+                    continue;
                 }
-                Object cascadeObject = getObjectByReference(fieldXmlElement.getAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE));
-                field.set(newObject, cascadeObject);
+                Element fieldXmlElement = XmlHelper.getChildByNameAndAttribute(parent, PersistenceContext.XML_ATTRIBUTE_FIELD, PersistenceContext.XML_ATTRIBUTE_FIELD_NAME, field.getName());
+                boolean accessibility = field.canAccess(newObject);
+                field.setAccessible(true);
+
+                // TODO support collections and non primitive types
+                if (fieldXmlElement.hasAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL)) {
+                    field.set(newObject, null);
+                } else if (ClassHelper.isSimpleValueType(field.getType())) {
+                    String fieldValue = fieldXmlElement.getTextContent();
+                    field.set(newObject, ConvertStringToType.convertStringToType(field.getType(), fieldValue));
+                } else if (Collection.class.isAssignableFrom(field.getType())) {
+                    Collection newCollection = (Collection) loadCollection(fieldXmlElement);
+                    field.set(newObject, newCollection);
+                } else {
+                    // cascade
+
+                    if (!fieldXmlElement.hasAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE)) {
+                        throw new PersistenceException("Bad XML. " + PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE + " expected.");
+                    }
+                    Object cascadeObject = getObjectByReference(fieldXmlElement.getAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE));
+                    field.set(newObject, cascadeObject);
+                }
+                field.setAccessible(accessibility);
+
             }
         } catch (Exception e) {
             throw new PersistenceException(e);
@@ -571,21 +591,7 @@ public class DefaultClassManagerImpl<T> {
         }
     }
 
-    private Element getElementByAtribute(NodeList nodeList, String atributeName, String atributeValue) {
-        for (int i=0; i <nodeList.getLength(); i++) {
-            Node xmlField = nodeList.item(i);
-            if (xmlField.getNodeType() != Node.ELEMENT_NODE) {
-                continue;
-            }
-            Element xmlElementField = (Element) xmlField;
 
-            Attr attribute = xmlElementField.getAttributeNode(atributeName);
-            if (attribute != null && attribute.getTextContent().equals(atributeName)) {
-                return xmlElementField;
-            }
-        }
-        return null;
-    }
     private String startCascade(Object object, PersistenceManager persistenceManager) {
         String reference = persistenceContext.getReferenceIfPersisted(object);
         if (reference == null) {
