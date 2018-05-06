@@ -1,10 +1,11 @@
 package cz.vutbr.fit.nodbpersistence.core.helpers;
 
 import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
-import org.w3c.dom.Attr;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+import org.w3c.dom.*;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 public class XmlHelper {
 
@@ -58,5 +59,15 @@ public class XmlHelper {
             node = node.getNextSibling();
         }
         return null;
+    }
+
+    public static void initXMLDocumentBuilder(DocumentBuilder documentBuilder, Document xmlDocument) {
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        try {
+            documentBuilder = documentBuilderFactory.newDocumentBuilder();
+        } catch (ParserConfigurationException e) {
+            throw new PersistenceException(e);
+        }
+        xmlDocument = documentBuilder.newDocument();
     }
 }

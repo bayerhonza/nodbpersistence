@@ -2,7 +2,7 @@ package cz.vutbr.fit.nodbpersistence.core;
 
 import cz.vutbr.fit.nodbpersistence.core.events.EventTypeToListener;
 import cz.vutbr.fit.nodbpersistence.core.helpers.ClassHelper;
-import cz.vutbr.fit.nodbpersistence.core.klass.manager.DefaultClassManagerImpl;
+import cz.vutbr.fit.nodbpersistence.core.klass.manager.*;
 import cz.vutbr.fit.nodbpersistence.core.listeners.AbstractEventListener;
 import cz.vutbr.fit.nodbpersistence.core.listeners.LoadEventListener;
 import cz.vutbr.fit.nodbpersistence.core.listeners.PersistEventListener;
@@ -17,11 +17,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
 public class PersistenceContext {
+
+    private final Class<?> collectionClass = Collection.class;
+    private final Class<?> mapClass = Map.class;
 
     /**
      * Default path to XML config file
@@ -57,6 +61,10 @@ public class PersistenceContext {
     private StorageContext storageContext;
     private final Map<Class<?>, DefaultClassManagerImpl> classClassManagerMap = new HashMap<>();
     private final HashMap<String,Object> referencesCache = new HashMap<>();
+
+    private CollectionManager collectionManager;
+    private  MapManager mapManager;
+    private  ArrayManager arrayManager;
 
     /**
      * Constructor for PersistenceContext without predefined properties
@@ -102,6 +110,18 @@ public class PersistenceContext {
         registerListeners();
         initStorageContext(properties.getProperty(ROOT_DIRECTORY_PROP));
         HashMap<Class<?>, Path> listOfPresentClasses = storageContext.scanForPersistedClass();
+        if (!listOfPresentClasses.containsKey(collectionClass)) {
+            ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(collectionClass.getName());
+            collectionManager = new CollectionManager(this,false,classFileHandler);
+        }
+        if (!listOfPresentClasses.containsKey(mapClass)) {
+            ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(mapClass.getName());
+            mapManager = new MapManager(this,false,mapClass,classFileHandler);
+        }
+        if (!listOfPresentClasses.containsKey(array)) {
+            ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(collectionClass.getName());
+            arrayManager = new ArrayManager(this,false,Object[].class,classFileHandler);
+        }
         loadClassManagers(listOfPresentClasses);
     }
 
@@ -110,12 +130,17 @@ public class PersistenceContext {
      * not been yet persisted.
      *
      * @param objectClass {@link Class} object of persisted class
-     * @param <T>         persisted class
      * @return {@link DefaultClassManagerImpl}
      */
     @SuppressWarnings({"unchecked"})
-    public <T> DefaultClassManagerImpl<T> findClassManager(Class<T> objectClass) {
-        if (!classClassManagerMap.containsKey(objectClass)) {
+    public AbstractClassManager findClassManager(Class<?> objectClass) {
+        if (objectClass.getClass().isArray()) {
+            return arrayManager;
+        } else if (Collection.class.isAssignableFrom(objectClass.getClass())) {
+            return collectionManager;
+        } else if (Map.class.isAssignableFrom(objectClass.getClass())) {
+            return mapManager;
+        } else if (!classClassManagerMap.containsKey(objectClass)) {
             createClassManager(objectClass);
         }
         return classClassManagerMap.get(objectClass);
@@ -126,26 +151,22 @@ public class PersistenceContext {
         storageContext.init();
     }
 
-    private <T> void createClassManager(Class<T> objectClass) {
+    private void createClassManager(Class<?> objectClass) {
         ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(objectClass.getCanonicalName());
-        DefaultClassManagerImpl<T> classManager = instantiateClassManager(objectClass, false, classFileHandler);
+        DefaultClassManagerImpl classManager = new DefaultClassManagerImpl(this, objectClass, false, classFileHandler);
         classClassManagerMap.put(objectClass, classManager);
     }
 
     private void loadClassManagers(HashMap<Class<?>, Path> classes) {
         classes.forEach((aClass, path) -> {
             ClassFileHandler classFileHandler = storageContext.createClassHandlerByPath(path);
-            DefaultClassManagerImpl classManager = instantiateClassManager(aClass, true, classFileHandler);
+            DefaultClassManagerImpl classManager = new DefaultClassManagerImpl(this, aClass, true, classFileHandler);
             classClassManagerMap.put(aClass, classManager);
         });
     }
 
-    private <T> DefaultClassManagerImpl<T> instantiateClassManager(Class<T> tClass, boolean xmlFileExists, ClassFileHandler classFileHandler) {
-        return new DefaultClassManagerImpl<>(this, tClass, xmlFileExists, classFileHandler);
-    }
-
     private void registerListeners() {
-        listeners.registerListener(PersistEventListener.class, new PersistEventListener());
+        listeners.registerListener(PersistEventListener.class,new PersistEventListener());
         listeners.registerListener(UpdateEventListener.class, new UpdateEventListener());
         listeners.registerListener(LoadEventListener.class, new LoadEventListener());
     }
@@ -163,7 +184,7 @@ public class PersistenceContext {
     }
 
     public String getReferenceIfPersisted(Object object) {
-        DefaultClassManagerImpl defaultClassManager = findClassManager(object.getClass());
+        AbstractClassManager defaultClassManager = findClassManager(object.getClass());
         Long objectId = defaultClassManager.isPersistentOrInProgress(object);
         if (objectId == null) {
             return null;

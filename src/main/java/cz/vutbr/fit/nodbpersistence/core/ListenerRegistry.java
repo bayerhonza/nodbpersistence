@@ -3,6 +3,7 @@ package cz.vutbr.fit.nodbpersistence.core;
 import cz.vutbr.fit.nodbpersistence.core.events.EventTypeToListener;
 import cz.vutbr.fit.nodbpersistence.core.listeners.AbstractEventListener;
 
+import java.util.EventListener;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,5 +19,4 @@ class ListenerRegistry {
     <T extends AbstractEventListener> T findListener(EventTypeToListener<T> eventType) {
         return (T) listeners.get(eventType.getListenerClass());
     }
-
 }

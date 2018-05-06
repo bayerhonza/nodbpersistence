@@ -5,6 +5,7 @@ import cz.vutbr.fit.nodbpersistence.core.PersistenceSettings;
 import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceCoreException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 class HelloWorldNoDbPersistence1 {
@@ -30,7 +31,7 @@ class HelloWorldNoDbPersistence1 {
 
         PersistenceManager pm = persistenceManagerFactory.getPersistenceManager();
 
-        Test3 test3 = new Test3("aaaaaa");
+        /*Test3 test3 = new Test3("aaaaaa");
         test3.strings[0] = new ArrayList<>();
         test3.strings[0].add("sdfasdf");
         test3.strings[1] = null;
@@ -38,10 +39,22 @@ class HelloWorldNoDbPersistence1 {
         test3.enume = TestEnum.A;
         test3.map.put(null,"ahaaa");
         test3.map.put(new Test1("asdfasdf"),"bbbb");
+        test3.map.put(new ArrayList<String>().add("asdfasfd"),"bbbb");
+        test3.map.put(test3.map,"bbbb");
+        pm.persist(test3);*/
+
+        Test3 test3 = new Test3("adsfas");
+        Test3 test31 = new Test3("bbbbbb");
+        HashMap<Object,Object> newMap = new HashMap<>();
+        test3.map =newMap;
+        test31.map = newMap;
+
         pm.persist(test3);
+        pm.persist(test31);
+
 
         Test3 test_loaded = pm.load(1L, Test3.class);
-        pm.persist(test_loaded);
+        Test3 test_loaded2 = pm.load(2L, Test3.class);
         System.out.println(test_loaded.toString());
     }
 }
