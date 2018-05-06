@@ -1,13 +1,17 @@
-import cz.fit.persistence.annotations.ObjectId;
+import cz.vutbr.fit.nodbpersistence.annotations.ObjectId;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class Test3 extends Test2 {
 
     @ObjectId
     public Long objectId;
+
+    public List[] strings = new List[3];
+
+    public Map<Test1,String> map = new HashMap<>();
+
+    public TestEnum enume;
 
     public Set<Test1> listTest1 = new HashSet<>();
 

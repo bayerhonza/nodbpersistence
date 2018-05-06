@@ -4,10 +4,7 @@ import cz.vutbr.fit.nodbpersistence.core.PersistenceManagerFactoryBuilder;
 import cz.vutbr.fit.nodbpersistence.core.PersistenceSettings;
 import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceCoreException;
 
-import java.util.ArrayList;
-import java.util.List;
-
-class HelloWorldNoDbPersistence1 {
+class HelloWorldNoDbPersistence2 {
 
     public static final Integer count = 1;
 
@@ -24,20 +21,9 @@ class HelloWorldNoDbPersistence1 {
             return;
         }
 
-        List<Integer[]> ahoj = new ArrayList<>();
-        Integer[] arrayInt = {10,100,1000};
-        ahoj.add(arrayInt);
-
         PersistenceManager pm = persistenceManagerFactory.getPersistenceManager();
 
         Test3 test3 = new Test3("aaaaaa");
-        test3.strings[0] = new ArrayList<>();
-        test3.strings[0].add("sdfasdf");
-        test3.strings[1] = null;
-        test3.strings[2] = ahoj;
-        test3.enume = TestEnum.A;
-        test3.map.put(null,"ahaaa");
-        test3.map.put(new Test1("asdfasdf"),"bbbb");
         pm.persist(test3);
 
         Test3 test_loaded = pm.load(1L, Test3.class);

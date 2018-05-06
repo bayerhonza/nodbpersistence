@@ -1,15 +1,13 @@
-import cz.fit.persistence.core.PersistenceManager;
-import cz.fit.persistence.core.PersistenceManagerFactory;
-import cz.fit.persistence.core.PersistenceManagerFactoryBuilder;
-import cz.fit.persistence.core.PersistenceSettings;
-import cz.fit.persistence.core.helpers.ClassHelper;
-import cz.fit.persistence.exceptions.PersistenceCoreException;
-import org.w3c.dom.Text;
+import cz.vutbr.fit.nodbpersistence.core.PersistenceManager;
+import cz.vutbr.fit.nodbpersistence.core.PersistenceManagerFactory;
+import cz.vutbr.fit.nodbpersistence.core.PersistenceManagerFactoryBuilder;
+import cz.vutbr.fit.nodbpersistence.core.PersistenceSettings;
+import cz.vutbr.fit.nodbpersistence.core.helpers.ClassHelper;
+import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceCoreException;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
 class HelloWorldNoDbPersistence {
@@ -28,10 +26,9 @@ class HelloWorldNoDbPersistence {
             persistenceManagerFactory = builder.buildPersistenceManagerFactory();
         } catch (PersistenceCoreException ex) {
             ex.printStackTrace();
-            return;
         }
 
-        PersistenceManager pm = persistenceManagerFactory.getPersistenceManager();
+        //PersistenceManager pm = persistenceManagerFactory.getPersistenceManager();
 
         /*Test3 test3 = new Test3();
         Set<Test1> listTest1 = test3.getListTest1();

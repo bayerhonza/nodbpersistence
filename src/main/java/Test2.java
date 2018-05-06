@@ -1,4 +1,4 @@
-import cz.fit.persistence.annotations.ObjectId;
+import cz.vutbr.fit.nodbpersistence.annotations.ObjectId;
 
 import java.util.ArrayList;
 import java.util.List;
