@@ -1,35 +1,26 @@
 package cz.vutbr.fit.nodbpersistence.core.klass.manager;
 
 import cz.vutbr.fit.nodbpersistence.core.PersistenceContext;
+import cz.vutbr.fit.nodbpersistence.core.PersistenceManager;
 import cz.vutbr.fit.nodbpersistence.core.events.PersistEntityEvent;
+import cz.vutbr.fit.nodbpersistence.core.helpers.ClassHelper;
 import cz.vutbr.fit.nodbpersistence.core.storage.ClassFileHandler;
 import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
-import org.objenesis.ObjenesisStd;
-import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.Transformer;
-import javax.xml.xpath.XPathFactory;
+import javax.xml.transform.TransformerException;
+import java.io.FileNotFoundException;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
 
 public class CollectionManager extends AbstractClassManager {
 
+    private static final String XML_ELEMENT_ROOT_COLLECTIONS = "collections";
+    private static final String XML_ELEMENT_COLLECTION = "collection";
+
+
 
     public CollectionManager(PersistenceContext persistenceContext, boolean xmlFileExists, ClassFileHandler classFileHandler) {
-        super(persistenceContext,xmlFileExists,Collection.class,classFileHandler);
-        if (!xmlFileExists) {
-            initXMLDocument(persistedClass);
-            initXMLTransformer();
-        } else {
-            refreshPersistedObjects();
-        }
+        super(persistenceContext,xmlFileExists,Collection.class,classFileHandler,XML_ELEMENT_ROOT_COLLECTIONS);
     }
 
     @Override
@@ -44,6 +35,26 @@ public class CollectionManager extends AbstractClassManager {
 
     @Override
     public void performPersist(PersistEntityEvent persistEntityEvent) {
+
+    }
+
+    private void persistObject(Collection collection,PersistenceManager persistenceManager) {
+        Element collectionXmlElement = xmlDocument.createElement(XML_ELEMENT_COLLECTION);
+        rootElement.appendChild(collectionXmlElement);
+        Long collectionId = idGenerator.getNextId();
+        collectionXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID, collectionId.toString());
+        collectionXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS, collection.getClass().getName());
+        objectsInProgress.add(collectionId);
+
+        createXMLCollection(collection,collectionXmlElement,persistenceManager);
+        registerObject(collection,collectionId);
+        objectsInProgress.remove(collectionId);
+
+        try {
+            flushXMLDocument();
+        } catch (TransformerException | FileNotFoundException e) {
+            throw new PersistenceException(e);
+        }
 
     }
 
@@ -72,8 +83,20 @@ public class CollectionManager extends AbstractClassManager {
         return null;
     }
 
-    @Override
-    public void initXMLDocument(Class<?> persistedClass) {
 
+
+    private void createXMLCollection(Collection collection, Element parentField, PersistenceManager persistenceManager) {
+        for (Object o : collection) {
+            Element xmlItemElement = xmlDocument.createElement(PersistenceContext.XML_ATTRIBUTE_COLLECTION_ITEM);
+            parentField.appendChild(xmlItemElement);
+            createXMLStructure(xmlItemElement,o,persistenceManager);
+        }
     }
+
+    public String persistAndGetReference(Collection collection,PersistenceManager persistenceManager) {
+        persistObject(collection,persistenceManager);
+        return getFullReference(collection);
+    }
+
+
 }

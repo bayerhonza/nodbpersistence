@@ -1,7 +1,10 @@
 package cz.vutbr.fit.nodbpersistence.core.klass.manager;
 
 import cz.vutbr.fit.nodbpersistence.core.PersistenceContext;
+import cz.vutbr.fit.nodbpersistence.core.PersistenceManager;
 import cz.vutbr.fit.nodbpersistence.core.events.PersistEntityEvent;
+import cz.vutbr.fit.nodbpersistence.core.helpers.ClassHelper;
+import cz.vutbr.fit.nodbpersistence.core.helpers.HashHelper;
 import cz.vutbr.fit.nodbpersistence.core.storage.ClassFileHandler;
 import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
 import org.objenesis.ObjenesisStd;
@@ -18,10 +21,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.*;
 import java.io.FileNotFoundException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public abstract class AbstractClassManager {
 
@@ -31,6 +31,8 @@ public abstract class AbstractClassManager {
 
 
     final HashMap<Long, Node> persistedObjects = new HashMap<>();
+    final HashMap<Object,Long> objectToId = new HashMap<>();
+    final HashMap<Long,Object> idToObject = new HashMap<>();
     final Set<Long> objectsInProgress = new HashSet<>();
     IdGenerator idGenerator;
 
@@ -43,12 +45,14 @@ public abstract class AbstractClassManager {
     protected Transformer transformer;
     protected XPathFactory xPathFactory = XPathFactory.newInstance();
 
-    public AbstractClassManager(PersistenceContext persistenceContext, boolean xmlFileExists, Class<?> persistedClass, ClassFileHandler classFileHandler) {
+    public AbstractClassManager(PersistenceContext persistenceContext, boolean xmlFileExists, Class<?> persistedClass, ClassFileHandler classFileHandler, String xmlRoot) {
         this.persistenceContext = persistenceContext;
         this.persistedClass = persistedClass;
         this.fileHandler = classFileHandler;
         if (!xmlFileExists) {
             initXMLTransformer();
+            initXMLDocument(persistedClass,xmlRoot);
+
         } else {
             refreshPersistedObjects();
         }
@@ -63,8 +67,6 @@ public abstract class AbstractClassManager {
     public abstract Object getObjectById(Long objectId);
 
     public abstract Long getObjectId(Object object);
-
-    public abstract  Object getObjectByReference(String reference) throws ClassNotFoundException;
 
     public Class<?> getHandledClass() {
         return this.persistedClass;
@@ -82,8 +84,6 @@ public abstract class AbstractClassManager {
         xmlDocument = documentBuilder.newDocument();
     }
 
-    public abstract void initXMLDocument(Class<?> persistedClass);
-
     void initXMLTransformer() {
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
         try {
@@ -93,6 +93,15 @@ public abstract class AbstractClassManager {
             throw new PersistenceException(e);
         }
 
+    }
+
+    protected void initXMLDocument(Class<?> persistedClass, String rootElementName) {
+        initXMLDocumentBuilder();
+        rootElement = xmlDocument.createElement(rootElementName);
+        Attr idGenAttr = xmlDocument.createAttribute(PersistenceContext.XML_ELEMENT_ID_GENERATOR);
+        idGenerator = new IdGenerator(idGenAttr);
+        rootElement.setAttributeNode(idGenAttr);
+        xmlDocument.appendChild(rootElement);
     }
     /**
      * Delete whitespace nodes from XML.
@@ -130,12 +139,81 @@ public abstract class AbstractClassManager {
         return objectNode;
     }
 
+    public void registerObject(Object object, Long objectId) {
+        this.idToObject.put(objectId,object);
+        this.objectToId.put(object,objectId);
+    }
+
     public Element getObjectNodeById(Long objectId) {
         Node node = queryXMLModel("/" + PersistenceContext.XML_ELEMENT_ROOT + "/" + PersistenceContext.XML_ELEMENT_OBJECT + "[@" + PersistenceContext.XML_ATTRIBUTE_OBJECT_ID + "=" + objectId + "]");
         if (node instanceof Element) {
             return (Element) node;
         } else {
             throw new PersistenceException("Object node with ObjectId " + objectId + "not found.");
+        }
+    }
+
+    protected String startCascade(Object object, PersistenceManager persistenceManager) {
+        String reference = persistenceContext.getReferenceIfPersisted(object);
+        if (reference == null) {
+            persistenceManager.persist(object);
+            Long objectId = persistenceContext.findClassManager(object.getClass()).getObjectId(object);
+            return object.getClass().getName() + "#" + objectId;
+        } else {
+            return reference;
+        }
+    }
+
+    public String getFullReference(Object object) {
+        if (objectToId.containsKey(object)) {
+            return persistedClass.getName() + "#" + objectToId.get(object).toString();
+        } else {
+            return null;
+        }
+    }
+
+    public Object getObjectByReference(String reference) throws ClassNotFoundException {
+        if (persistenceContext.isReferenceRegistered(reference)) {
+            return persistenceContext.getObjectByReference(reference);
+        }
+        String[] parsedReference = reference.split("#");
+        String className = parsedReference[0];
+        Long cascadeObjectId = Long.parseLong(parsedReference[1]);
+        Class<?> referencedClass = Class.forName(className);
+        if (referencedClass.equals(persistedClass)) {
+            return getObjectById(cascadeObjectId);
+        } else {
+            AbstractClassManager cascadeObjectManager = persistenceContext.findClassManager(referencedClass);
+            return cascadeObjectManager.getObjectById(cascadeObjectId);
+        }
+    }
+
+    /**
+     * Creates an XML in-memory model of object.
+     *
+     * @param xmlField           root field for XML
+     * @param object             object to be stored
+     * @param persistenceManager persistence manager of event to store the object if part of collection
+     */
+    protected void createXMLStructure(Element xmlField, Object object, PersistenceManager persistenceManager) {
+        if (object == null) {           // null for all null values
+            xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL, Boolean.TRUE.toString());
+        }else if (object.getClass().isEnum() || ClassHelper.isSimpleValueType(object.getClass())) { // if object type is enum, primitive or its wrapper
+            xmlField.appendChild(xmlDocument.createTextNode(object.toString()));
+        } else if (object.getClass().isArray()) { // is array
+            Object[] castedArray = (Object[]) object;
+            String fullReference = persistenceContext.getArrayManager().persistAndGetReference(castedArray,persistenceManager);
+            xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE, fullReference);
+        } else if (object instanceof Collection) { // type is collection
+            Collection castedCollection = (Collection) object;
+            String fullReference = persistenceContext.getCollectionManager().persistAndGetReference(castedCollection,persistenceManager);
+            xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE, fullReference);
+        } else if (object instanceof Map) {
+            String fullReference = persistenceContext.getMapManager().persistAndGetReference((Map) object,persistenceManager);
+            xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE, fullReference);
+        } else {
+            String reference = startCascade(object, persistenceManager);
+            xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE, reference);
         }
 
     }

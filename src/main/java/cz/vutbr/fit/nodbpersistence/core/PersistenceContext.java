@@ -26,6 +26,7 @@ public class PersistenceContext {
 
     private final Class<?> collectionClass = Collection.class;
     private final Class<?> mapClass = Map.class;
+    private final Class<?> arrayClass = Object[].class;
 
     /**
      * Default path to XML config file
@@ -118,9 +119,9 @@ public class PersistenceContext {
             ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(mapClass.getName());
             mapManager = new MapManager(this,false,mapClass,classFileHandler);
         }
-        if (!listOfPresentClasses.containsKey(array)) {
+        if (!listOfPresentClasses.containsKey(arrayClass)) {
             ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(collectionClass.getName());
-            arrayManager = new ArrayManager(this,false,Object[].class,classFileHandler);
+            arrayManager = new ArrayManager(this,false,arrayClass,classFileHandler);
         }
         loadClassManagers(listOfPresentClasses);
     }
@@ -144,6 +145,18 @@ public class PersistenceContext {
             createClassManager(objectClass);
         }
         return classClassManagerMap.get(objectClass);
+    }
+
+    public ArrayManager getArrayManager() {
+        return this.arrayManager;
+    }
+
+    public MapManager getMapManager() {
+        return this.mapManager;
+    }
+
+    public CollectionManager getCollectionManager() {
+        return this.collectionManager;
     }
 
     private void initStorageContext(String rootDirectory) throws PersistenceCoreException {

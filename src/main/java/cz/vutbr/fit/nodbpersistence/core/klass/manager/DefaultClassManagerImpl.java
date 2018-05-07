@@ -47,12 +47,15 @@ public class DefaultClassManagerImpl extends AbstractClassManager{
      * @param persistenceContext persistence unit context
      * @param persistedClass    class to be persisted by this classmanager
      * @param xmlFileExists     flag of already existing persistence system.
-     * @param classFileHandler
+     * @param classFileHandler handler of file for class
      */
     public DefaultClassManagerImpl(PersistenceContext persistenceContext, Class<?> persistedClass, boolean xmlFileExists, ClassFileHandler classFileHandler) {
-        super(persistenceContext,xmlFileExists,persistedClass,classFileHandler);
+        super(persistenceContext,xmlFileExists,persistedClass,classFileHandler,PersistenceContext.XML_ELEMENT_ROOT);
         this.objectIdField = getObjectIdField();
         this.objectInstantiator = new ObjenesisStd().getInstantiatorOf(persistedClass);
+        if (!xmlFileExists) {
+            initXMLDocument(persistedClass,PersistenceContext.XML_ELEMENT_ROOT);
+        }
     }
 
     @Override
@@ -121,17 +124,6 @@ public class DefaultClassManagerImpl extends AbstractClassManager{
         }
     }
 
-    @Override
-    public void initXMLDocument(Class<?> persistedClass) {
-        initXMLDocumentBuilder();
-        rootElement = xmlDocument.createElement(PersistenceContext.XML_ELEMENT_ROOT);
-        rootElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_CLASS, persistedClass.getName());
-        Attr idGenAttr = xmlDocument.createAttribute(PersistenceContext.XML_ELEMENT_ID_GENERATOR);
-        idGenerator = new IdGenerator(idGenAttr);
-        rootElement.setAttributeNode(idGenAttr);
-        xmlDocument.appendChild(rootElement);
-    }
-
     private void updateObject(Long objectId, Object object) {
         boolean isDirty = checkIfDirty(objectId, object);
         if (isDirty) {
@@ -184,6 +176,7 @@ public class DefaultClassManagerImpl extends AbstractClassManager{
             createFieldsXML(fields, persistedObjectElement, object, persistenceManager);
 
             objectsInProgress.remove(objectId);
+            registerObject(object,objectId);
             persistedObjects.put(objectId, persistedObjectElement);
             flushXMLDocument();
         } catch (IllegalAccessException | FileNotFoundException | TransformerException e) {
@@ -392,23 +385,6 @@ public class DefaultClassManagerImpl extends AbstractClassManager{
         }
     }
 
-    @Override
-    public Object getObjectByReference(String reference) throws ClassNotFoundException {
-        if (persistenceContext.isReferenceRegistered(reference)) {
-            return persistenceContext.getObjectByReference(reference);
-        }
-        String[] parsedReference = reference.split("#");
-        String className = parsedReference[0];
-        Long cascadeObjectId = Long.parseLong(parsedReference[1]);
-        Class<?> referencedClass = Class.forName(className);
-        if (referencedClass.equals(persistedClass)) {
-            return getObjectById(cascadeObjectId);
-        } else {
-            AbstractClassManager cascadeObjectManager = persistenceContext.findClassManager(referencedClass);
-            return cascadeObjectManager.getObjectById(cascadeObjectId);
-        }
-    }
-
     @SuppressWarnings("unchecked")
     private Object loadMap(Element node, Class<?> mapType) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
         Class<?> collectionClass = Class.forName(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS));
@@ -491,94 +467,7 @@ public class DefaultClassManagerImpl extends AbstractClassManager{
         }
     }
 
-    /**
-     * Creates an XML in-memory model of object.
-     *
-     * @param xmlField           root field for XML
-     * @param object             object to be stored
-     * @param persistenceManager persistence manager of event to store the object if part of collection
-     */
-    private void createXMLStructure(Element xmlField, Object object, PersistenceManager persistenceManager) {
-        if (object == null) {           // null for all null values
-            xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL, Boolean.TRUE.toString());
-        }else if (object.getClass().isEnum() || ClassHelper.isSimpleValueType(object.getClass())) { // if object type is enum, primitive or its wrapper
-            xmlField.appendChild(xmlDocument.createTextNode(object.toString()));
-        } else if (object.getClass().isArray()) { // is array
-            Object[] array = (Object[]) object;
-            xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS, array.getClass().getName());
-            xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_ARRAY_SIZE, Integer.toString(array.length));
-           createXMLArray(array,xmlField,persistenceManager,false);
-        } else if (object instanceof Collection) { // type is collection
-            xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS, object.getClass().getName());
-            Collection collection = (Collection<?>) object;
-            createXMLCollection(collection,xmlField,persistenceManager);
-        } else if (object instanceof Map) {
-            xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS, object.getClass().getName());
-            Map map = (Map) object;
-            createXMLMap(map,xmlField,persistenceManager);
-        } else {
-            String reference = startCascade(object, persistenceManager);
-            xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE, reference);
-        }
 
-    }
-
-    private void createXMLMap(Map map,Element parentField, PersistenceManager persistenceManager) {
-            for (Object key : map.keySet()) {
-                Element entryXmlElement = xmlDocument.createElement(PersistenceContext.XML_ELEMENT_MAP_ENTRY);
-                parentField.appendChild(entryXmlElement);
-                Object value = map.get(key);
-
-                createXMLField(entryXmlElement,key,PersistenceContext.XML_ELEMENT_MAP_KEY,persistenceManager);
-                createXMLField(entryXmlElement,value,PersistenceContext.XML_ELEMENT_MAP_VALUE,persistenceManager);
-
-                /*Element valueXmlElement = xmlDocument.createElement(PersistenceContext.XML_ELEMENT_MAP_VALUE);
-                valueXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS,value.getClass().getName());
-                entryXmlElement.appendChild(valueXmlElement);
-                createXMLStructure(valueXmlElement,value,persistenceManager);*/
-            }
-    }
-
-    private void createXMLField(Element rootXmlElement,Object value, String xmlElementName,PersistenceManager persistenceManager) {
-        Element xmlElement = xmlDocument.createElement(xmlElementName);
-        rootXmlElement.appendChild(xmlElement);
-        if (value == null) {
-            xmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL,Boolean.TRUE.toString());
-            return;
-        }
-        xmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS,value.getClass().getName());
-
-
-        createXMLStructure(xmlElement,value,persistenceManager);
-    }
-    private void createXMLCollection(Collection collection, Element parentField, PersistenceManager persistenceManager) {
-        createXMLArray(collection.toArray(),parentField,persistenceManager,true);
-    }
-
-    private void createXMLArray(Object[] array, Element parentField, PersistenceManager persistenceManager, boolean fromCollection) {
-        for (Object o : array) {
-            Element xmlItemElement = xmlDocument.createElement(PersistenceContext.XML_ATTRIBUTE_COLLECTION_ITEM);
-            if (o == null) {
-                xmlItemElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL, Boolean.TRUE.toString());
-                parentField.appendChild(xmlItemElement);
-                continue;
-            }
-            parentField.appendChild(xmlItemElement);
-
-            if (ClassHelper.isSimpleValueType(o.getClass())) {
-                xmlItemElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS, o.getClass().getName());
-                xmlItemElement.appendChild(xmlDocument.createTextNode(o.toString()));
-            } else if (o instanceof Collection<?> || o instanceof Object[]) {
-                // if item of collection is a collection, recurse
-                xmlItemElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS, o.getClass().getName());
-                createXMLStructure(xmlItemElement, o,persistenceManager);
-            } else {
-                // persist item as object
-                String reference = startCascade(o, persistenceManager);
-                xmlItemElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE, reference);
-            }
-        }
-    }
 
     private Field getObjectIdField() {
         List<Field> objectIdFields = Arrays.stream(persistedClass.getDeclaredFields())
@@ -628,14 +517,5 @@ public class DefaultClassManagerImpl extends AbstractClassManager{
     }
 
 
-    private String startCascade(Object object, PersistenceManager persistenceManager) {
-        String reference = persistenceContext.getReferenceIfPersisted(object);
-        if (reference == null) {
-            persistenceManager.persist(object);
-            Long objectId = persistenceContext.findClassManager(object.getClass()).getObjectId(object);
-            return object.getClass().getName() + "#" + objectId;
-        } else {
-            return reference;
-        }
-    }
+
 }
