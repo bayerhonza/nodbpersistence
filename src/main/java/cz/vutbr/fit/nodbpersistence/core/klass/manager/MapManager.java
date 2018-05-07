@@ -93,7 +93,9 @@ public class MapManager extends AbstractClassManager {
     }
 
     public String persistAndGetReference(Map map, PersistenceManager persistenceManager) {
-        persistObject(map, persistenceManager);
+        if (!objectToId.containsKey(map)) {
+            persistObject(map, persistenceManager);
+        }
         return getFullReference(map);
     }
 
