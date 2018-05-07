@@ -3,13 +3,12 @@ package cz.vutbr.fit.nodbpersistence.core.klass.manager;
 import cz.vutbr.fit.nodbpersistence.core.PersistenceContext;
 import cz.vutbr.fit.nodbpersistence.core.PersistenceManager;
 import cz.vutbr.fit.nodbpersistence.core.events.PersistEntityEvent;
-import cz.vutbr.fit.nodbpersistence.core.helpers.ClassHelper;
 import cz.vutbr.fit.nodbpersistence.core.storage.ClassFileHandler;
-import org.w3c.dom.Attr;
+import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
 import org.w3c.dom.Element;
 
-import java.util.Collection;
-import java.util.Map;
+import javax.xml.transform.TransformerException;
+import java.io.FileNotFoundException;
 
 public class ArrayManager extends AbstractClassManager {
 
@@ -20,7 +19,7 @@ public class ArrayManager extends AbstractClassManager {
     private final static String XML_ATTRIBUTE_INST_CLASS = "inst";
 
     public ArrayManager(PersistenceContext persistenceContext, boolean xmlFileExists, Class<?> persistedClass, ClassFileHandler classFileHandler) {
-        super(persistenceContext, xmlFileExists, persistedClass, classFileHandler,PersistenceContext.XML_ELEMENT_ROOT);
+        super(persistenceContext, xmlFileExists, persistedClass, classFileHandler,XML_ELEMENT_ARRAY_ROOT);
     }
 
     @Override
@@ -48,6 +47,11 @@ public class ArrayManager extends AbstractClassManager {
         createXMLArray(array, arrayXmlElement, persistenceManager);
         registerObject(array,arrayId);
         objectsInProgress.remove(arrayId);
+        try {
+            flushXMLDocument();
+        } catch (TransformerException | FileNotFoundException e) {
+            throw new PersistenceException(e);
+        }
 
     }
 

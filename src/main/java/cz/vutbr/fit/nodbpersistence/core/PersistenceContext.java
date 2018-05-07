@@ -120,7 +120,7 @@ public class PersistenceContext {
             mapManager = new MapManager(this,false,mapClass,classFileHandler);
         }
         if (!listOfPresentClasses.containsKey(arrayClass)) {
-            ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(collectionClass.getName());
+            ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(arrayClass.getName());
             arrayManager = new ArrayManager(this,false,arrayClass,classFileHandler);
         }
         loadClassManagers(listOfPresentClasses);

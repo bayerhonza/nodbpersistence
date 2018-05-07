@@ -4,8 +4,11 @@ import cz.vutbr.fit.nodbpersistence.core.PersistenceContext;
 import cz.vutbr.fit.nodbpersistence.core.PersistenceManager;
 import cz.vutbr.fit.nodbpersistence.core.events.PersistEntityEvent;
 import cz.vutbr.fit.nodbpersistence.core.storage.ClassFileHandler;
+import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
 import org.w3c.dom.Element;
 
+import javax.xml.transform.TransformerException;
+import java.io.FileNotFoundException;
 import java.util.Map;
 
 public class MapManager extends AbstractClassManager {
@@ -37,10 +40,16 @@ public class MapManager extends AbstractClassManager {
         rootElement.appendChild(mapXmlElement);
         Long mapId = idGenerator.getNextId();
         mapXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID, mapId.toString());
+        mapXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS, map.getClass().getName());
         objectsInProgress.add(mapId);
         createXMLMap(map, mapXmlElement, persistenceManager);
         registerObject(map,mapId);
         objectsInProgress.remove(mapId);
+        try {
+            flushXMLDocument();
+        } catch (TransformerException | FileNotFoundException e) {
+            throw new PersistenceException(e);
+        }
     }
 
     @Override
