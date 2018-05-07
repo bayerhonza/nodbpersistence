@@ -73,7 +73,7 @@ public class ClassHelper {
         }
     }
 
-    public static String createReferenceString(Object object, Long objectId) {
-        return object.getClass().getCanonicalName() + "#" + objectId;
+    public static String createReferenceString(Class<?> objectClass, Long objectId) {
+        return objectClass.getName() + "#" + objectId;
     }
 }

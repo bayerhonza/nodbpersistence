@@ -24,6 +24,19 @@ import java.util.Properties;
 
 public class PersistenceContext {
 
+    public static final String PATH_TO_CONFIG = "\\resources\\persistence-nodb.xml";
+
+    public static final String ROOT_DIRECTORY_PROP = "rootDirectory";
+
+    public static final String XML_ELEMENT_ID_GENERATOR = "id_gen";
+    public static final String XML_ATTRIBUTE_OBJECT_ID = "id";
+    public static final String XML_ATTRIBUTE_ISNULL = "is_null";
+    public static final String XML_ATTRIBUTE_FIELD_REFERENCE = "ref";
+
+    public static final String XML_ATTRIBUTE_COLL_INST_CLASS = "inst_class";
+
+    public static final String XML_ATTRIBUTE_NAME = "name";
+
     private final Class<?> collectionClass = Collection.class;
     private final Class<?> mapClass = Map.class;
     private final Class<?> arrayClass = Object[].class;
@@ -31,30 +44,6 @@ public class PersistenceContext {
     /**
      * Default path to XML config file
      */
-    public static final String PATH_TO_CONFIG = "./resources/persistence-nodb.xml";
-
-    public static final String ROOT_DIRECTORY_PROP = "rootDirectory";
-
-    public static final String XML_ELEMENT_ROOT = "class";
-    public static final String XML_ELEMENT_OBJECT = "object";
-    public static final String XML_ELEMENT_INHERITED = "inherited";
-    public static final String XML_ELEMENT_ID_GENERATOR = "id_gen";
-    public static final String XML_ATTRIBUTE_OBJECT_ID = "id";
-    public static final String XML_ATTRIBUTE_CLASS = "name";
-
-    public static final String XML_ATTRIBUTE_COLL_INST_CLASS = "inst_class";
-    public static final String XML_ATTRIBUTE_ISNULL = "is_null";
-    public static final String XML_ATTRIBUTE_COLLECTION_ITEM = "item";
-    public static final String XML_ATTRIBUTE_FIELD = "field";
-    public static final String XML_ATTRIBUTE_FIELD_NAME = "name";
-    public static final String XML_ATTRIBUTE_FIELD_REFERENCE = "ref";
-    public static final String XML_ATTRIBUTE_INHERITED_CLASS = "inherClass";
-
-    public static final String XML_ATTRIBUTE_ARRAY_SIZE = "size";
-
-    public static final String XML_ELEMENT_MAP_ENTRY = "entry";
-    public static final String XML_ELEMENT_MAP_KEY = "key";
-    public static final String XML_ELEMENT_MAP_VALUE = "value";
 
     private Properties properties;
 
@@ -111,19 +100,44 @@ public class PersistenceContext {
         registerListeners();
         initStorageContext(properties.getProperty(ROOT_DIRECTORY_PROP));
         HashMap<Class<?>, Path> listOfPresentClasses = storageContext.scanForPersistedClass();
+        // class manager for collections
         if (!listOfPresentClasses.containsKey(collectionClass)) {
             ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(collectionClass.getName());
-            collectionManager = new CollectionManager(this,false,classFileHandler);
+            collectionManager = new CollectionManager(this,collectionClass,false,classFileHandler);
+        } else {
+            ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(collectionClass.getName());
+            collectionManager =  new CollectionManager(this, collectionClass,true, classFileHandler);
+            listOfPresentClasses.remove(collectionClass);
         }
+
+        // class manager for maps
         if (!listOfPresentClasses.containsKey(mapClass)) {
             ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(mapClass.getName());
-            mapManager = new MapManager(this,false,mapClass,classFileHandler);
+            mapManager = new MapManager(this,mapClass,false,classFileHandler);
+        }else {
+            ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(mapClass.getName());
+            mapManager = new MapManager(this, mapClass,true, classFileHandler);
+            listOfPresentClasses.remove(mapClass);
         }
+
+        // class manager for arrays
         if (!listOfPresentClasses.containsKey(arrayClass)) {
             ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(arrayClass.getName());
             arrayManager = new ArrayManager(this,false,arrayClass,classFileHandler);
+        } else {
+            ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(arrayClass.getName());
+            arrayManager = new ArrayManager(this, true, arrayClass, classFileHandler);
+            listOfPresentClasses.remove(arrayClass);
         }
+
         loadClassManagers(listOfPresentClasses);
+    }
+
+    public AbstractClassManager findClassManager(String reference) throws ClassNotFoundException {
+        String[] parsedReference = reference.split("#");
+        String className = parsedReference[0];
+        Class<?> referencedClass = Class.forName(className);
+        return findClassManager(referencedClass);
     }
 
     /**
@@ -159,6 +173,7 @@ public class PersistenceContext {
         return this.collectionManager;
     }
 
+
     private void initStorageContext(String rootDirectory) throws PersistenceCoreException {
         storageContext = new StorageContext(Paths.get(rootDirectory));
         storageContext.init();
@@ -184,10 +199,6 @@ public class PersistenceContext {
         listeners.registerListener(LoadEventListener.class, new LoadEventListener());
     }
 
-    public void registerTempReference(String reference, Object object) {
-        referencesCache.put(reference,object);
-    }
-
     public Object getObjectByReference(String reference) {
         return referencesCache.get(reference);
     }
@@ -196,15 +207,7 @@ public class PersistenceContext {
         return referencesCache.containsKey(reference);
     }
 
-    public String getReferenceIfPersisted(Object object) {
-        AbstractClassManager defaultClassManager = findClassManager(object.getClass());
-        Long objectId = defaultClassManager.isPersistentOrInProgress(object);
-        if (objectId == null) {
-            return null;
-        }
-        else {
-            return ClassHelper.createReferenceString(object,objectId);
-        }
-
+    public String getFullReference(Class<?> klazz, Long objectId) {
+        return klazz.getName() + "#" + objectId.toString();
     }
 }

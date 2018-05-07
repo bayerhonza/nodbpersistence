@@ -9,7 +9,7 @@ public class Test3 extends Test2 {
 
     public List[] strings = new List[3];
 
-    public Map<Object,Object> map = new HashMap<>();
+    public Map<String,Integer> map = new HashMap<>();
 
     public TestEnum enume;
 

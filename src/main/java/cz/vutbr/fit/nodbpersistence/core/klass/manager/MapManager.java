@@ -3,12 +3,17 @@ package cz.vutbr.fit.nodbpersistence.core.klass.manager;
 import cz.vutbr.fit.nodbpersistence.core.PersistenceContext;
 import cz.vutbr.fit.nodbpersistence.core.PersistenceManager;
 import cz.vutbr.fit.nodbpersistence.core.events.PersistEntityEvent;
+import cz.vutbr.fit.nodbpersistence.core.helpers.XmlHelper;
 import cz.vutbr.fit.nodbpersistence.core.storage.ClassFileHandler;
 import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import javax.xml.transform.TransformerException;
 import java.io.FileNotFoundException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 
 public class MapManager extends AbstractClassManager {
@@ -16,18 +21,22 @@ public class MapManager extends AbstractClassManager {
     public static final String XML_ELEMENT_ROOT_MAP = "maps";
     public static final String XML_ELEMENT_MAP = "map";
 
-    public MapManager(PersistenceContext persistenceContext, boolean xmlFileExists, Class<?> persistedClass, ClassFileHandler classFileHandler) {
+    public static final String XML_ELEMENT_MAP_ENTRY = "entry";
+    public static final String XML_ELEMENT_MAP_KEY = "key";
+    public static final String XML_ELEMENT_MAP_VALUE = "value";
+
+    public MapManager(PersistenceContext persistenceContext,  Class<?> persistedClass, boolean xmlFileExists, ClassFileHandler classFileHandler) {
         super(persistenceContext, xmlFileExists, persistedClass, classFileHandler,XML_ELEMENT_ROOT_MAP);
     }
 
     @Override
-    void refreshPersistedObjects() {
-
+    public String getRootXmlElementName() {
+        return XML_ELEMENT_ROOT_MAP;
     }
 
     @Override
-    public Object performLoad(Long objectId) {
-        return null;
+    public String getItemXmlElementName() {
+        return XML_ELEMENT_MAP;
     }
 
     @Override
@@ -35,16 +44,18 @@ public class MapManager extends AbstractClassManager {
 
     }
 
-    private void persistObject(Map map, PersistenceManager persistenceManager) {
+    @Override
+    public void persistObject(Object object, PersistenceManager persistenceManager) {
+        Map map = (Map) object;
         Element mapXmlElement = xmlDocument.createElement(XML_ELEMENT_MAP);
         rootElement.appendChild(mapXmlElement);
         Long mapId = idGenerator.getNextId();
         mapXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID, mapId.toString());
         mapXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS, map.getClass().getName());
-        objectsInProgress.add(mapId);
+        //objectsInProgress.add(mapId);
         createXMLMap(map, mapXmlElement, persistenceManager);
         registerObject(map,mapId);
-        objectsInProgress.remove(mapId);
+        //objectsInProgress.remove(mapId);
         try {
             flushXMLDocument();
         } catch (TransformerException | FileNotFoundException e) {
@@ -54,7 +65,15 @@ public class MapManager extends AbstractClassManager {
 
     @Override
     public Object getObjectById(Long objectId) {
-        return null;
+        if (idToObject.containsKey(objectId)) {
+            return idToObject.get(objectId);
+        }
+        Element mapElement = getObjectNodeById(objectId);
+        try {
+            return loadMap(mapElement);
+        } catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException | IllegalAccessException | InstantiationException e) {
+            throw new PersistenceException(e);
+        }
     }
 
     @Override
@@ -62,29 +81,14 @@ public class MapManager extends AbstractClassManager {
         return null;
     }
 
-    @Override
-    public Object getObjectByReference(String reference) throws ClassNotFoundException {
-        return null;
-    }
-
-    @Override
-    public Long isPersistentOrInProgress(Object object) {
-        return null;
-    }
-
     private void createXMLMap(Map map,Element parentField, PersistenceManager persistenceManager) {
         for (Object key : map.keySet()) {
-            Element entryXmlElement = xmlDocument.createElement(PersistenceContext.XML_ELEMENT_MAP_ENTRY);
+            Element entryXmlElement = xmlDocument.createElement(XML_ELEMENT_MAP_ENTRY);
             parentField.appendChild(entryXmlElement);
             Object value = map.get(key);
 
-            createXMLField(entryXmlElement,key,PersistenceContext.XML_ELEMENT_MAP_KEY,persistenceManager);
-            createXMLField(entryXmlElement,value,PersistenceContext.XML_ELEMENT_MAP_VALUE,persistenceManager);
-
-                /*Element valueXmlElement = xmlDocument.createElement(PersistenceContext.XML_ELEMENT_MAP_VALUE);
-                valueXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS,value.getClass().getName());
-                entryXmlElement.appendChild(valueXmlElement);
-                createXMLStructure(valueXmlElement,value,persistenceManager);*/
+            createXMLField(entryXmlElement,key,XML_ELEMENT_MAP_KEY,persistenceManager);
+            createXMLField(entryXmlElement,value,XML_ELEMENT_MAP_VALUE,persistenceManager);
         }
     }
 
@@ -101,11 +105,29 @@ public class MapManager extends AbstractClassManager {
         createXMLStructure(xmlElement,value,persistenceManager);
     }
 
-    public String persistAndGetReference(Map map, PersistenceManager persistenceManager) {
-        if (!objectToId.containsKey(map)) {
-            persistObject(map, persistenceManager);
+    @SuppressWarnings("unchecked")
+    public Object loadMap(Element node) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+        Class<?> collectionClass = Class.forName(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS));
+        Constructor collectionConstructor = collectionClass.getConstructor();
+        Map newMap = (Map) collectionConstructor.newInstance();
+
+        NodeList entries = node.getChildNodes();
+        for (int i = 0; i < entries.getLength(); i++) {
+            if (entries.item(i).getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
+
+            Element keyElement = (Element) entries.item(i).getFirstChild();
+            Element valueElement = XmlHelper.getNextElement(keyElement);
+            if (valueElement == null) {
+                throw new PersistenceException("No value element for map entry.");
+            }
+            Object keyObject = loadObjectFromElement(keyElement);
+            Object valueObject = loadObjectFromElement(valueElement);
+            newMap.put(keyObject,valueObject);
         }
-        return getFullReference(map);
+
+        return newMap;
     }
 
 }
