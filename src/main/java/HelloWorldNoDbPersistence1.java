@@ -46,8 +46,8 @@ class HelloWorldNoDbPersistence1 {
         test31.map = newMap;
         test3.map.put("cccc",2);
 
-        pm.persist(test3);
-        pm.persist(test31);
+        //pm.persist(test3);
+        //pm.persist(test31);
 
 
         Test3 test_loaded = pm.load(1L, Test3.class);

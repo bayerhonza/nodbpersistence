@@ -179,12 +179,8 @@ public abstract class AbstractClassManager {
         String className = parsedReference[0];
         Long cascadeObjectId = Long.parseLong(parsedReference[1]);
         Class<?> referencedClass = Class.forName(className);
-        if (referencedClass.equals(persistedClass)) {
-            return getObjectById(cascadeObjectId);
-        } else {
-            AbstractClassManager cascadeObjectManager = persistenceContext.findClassManager(referencedClass);
-            return cascadeObjectManager.getObjectById(cascadeObjectId);
-        }
+        AbstractClassManager cascadeObjectManager = persistenceContext.findClassManager(referencedClass);
+        return cascadeObjectManager.getObjectById(cascadeObjectId);
     }
 
     /**

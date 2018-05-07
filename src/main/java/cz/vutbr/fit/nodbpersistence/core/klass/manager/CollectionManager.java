@@ -87,6 +87,11 @@ public class CollectionManager extends AbstractClassManager {
     private void createXMLCollection(Collection collection, Element parentField, PersistenceManager persistenceManager) {
         for (Object o : collection) {
             Element xmlItemElement = xmlDocument.createElement(XML_ELEMENT_COLLECTION_ITEM);
+            if (o == null) {
+                xmlItemElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL,Boolean.TRUE.toString());
+                continue;
+            }
+            xmlItemElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS,o.getClass().getName());
             parentField.appendChild(xmlItemElement);
             createXMLStructure(xmlItemElement, o, persistenceManager);
         }

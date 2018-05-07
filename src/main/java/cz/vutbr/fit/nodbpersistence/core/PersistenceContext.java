@@ -149,11 +149,11 @@ public class PersistenceContext {
      */
     @SuppressWarnings({"unchecked"})
     public AbstractClassManager findClassManager(Class<?> objectClass) {
-        if (objectClass.getClass().isArray()) {
+        if (objectClass.isArray()) {
             return arrayManager;
-        } else if (Collection.class.isAssignableFrom(objectClass.getClass())) {
+        } else if (Collection.class.isAssignableFrom(objectClass)) {
             return collectionManager;
-        } else if (Map.class.isAssignableFrom(objectClass.getClass())) {
+        } else if (Map.class.isAssignableFrom(objectClass)) {
             return mapManager;
         } else if (!classClassManagerMap.containsKey(objectClass)) {
             createClassManager(objectClass);

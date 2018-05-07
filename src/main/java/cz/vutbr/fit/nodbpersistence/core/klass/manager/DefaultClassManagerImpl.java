@@ -239,6 +239,8 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
 
     private Object loadObject(Element objectElement) {
         Object newObj = objectInstantiator.newInstance();
+        Long objectId = Long.valueOf(objectElement.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID));
+        registerObject(newObj,objectId);
         //persistenceContext.registerReference(ClassHelper.createReferenceString(newObj.getClass(), objectId), newObj);
 
         // setting of objectID

@@ -93,17 +93,15 @@ public class ArrayManager extends AbstractClassManager {
     private void createXMLArray(Object[] array, Element parentField, PersistenceManager persistenceManager) {
         for (Object o : array) {
             Element xmlItemElement = xmlDocument.createElement(XML_ELEMENT_ARRAY_ITEM);
+            if (o == null) {
+                xmlItemElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL,Boolean.TRUE.toString());
+                continue;
+            }
+            xmlItemElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS,o.getClass().getName());
             parentField.appendChild(xmlItemElement);
             createXMLStructure(xmlItemElement,o,persistenceManager);
         }
     }
-
-    public String persistAndGetReference(Object[] object, PersistenceManager persistenceManager) {
-        persistObject(object, persistenceManager);
-        return getFullReference(object);
-    }
-
-
 
     public Object loadArray(Element node) throws ClassNotFoundException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
         Class<?> instClass = Class.forName(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS)).getComponentType();
