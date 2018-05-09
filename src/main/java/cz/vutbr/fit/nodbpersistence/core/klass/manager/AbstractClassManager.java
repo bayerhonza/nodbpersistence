@@ -23,7 +23,9 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.*;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
 import java.util.*;
 
 public abstract class AbstractClassManager {
@@ -33,9 +35,9 @@ public abstract class AbstractClassManager {
     final Class<?> persistedClass;
 
 
-    protected final HashMap<Long, Node> idToNode = new HashMap<>();
-    protected final HashMap<Object,Long> objectToId = new HashMap<>();
-    protected final HashMap<Long,Object> idToObject = new HashMap<>();
+    protected final HashMap<Long, Element> idToElement = new HashMap<>();
+    protected final IdentityHashMap<Object, Long> objectToId = new IdentityHashMap<>();
+    protected final IdentityHashMap<Long, Object> idToObject = new IdentityHashMap<>();
     protected final HashSet<String> objectsInProgress = new HashSet<>();
     IdGenerator idGenerator;
 
@@ -48,24 +50,25 @@ public abstract class AbstractClassManager {
     protected Transformer transformer;
     protected XPathFactory xPathFactory = XPathFactory.newInstance();
 
-    public AbstractClassManager(PersistenceContext persistenceContext, boolean xmlFileExists, Class<?> persistedClass, ClassFileHandler classFileHandler, String xmlRoot) {
+    public AbstractClassManager(PersistenceContext persistenceContext, boolean xmlFileExists, Class<?> persistedClass, ClassFileHandler classFileHandler) {
         this.persistenceContext = persistenceContext;
         this.persistedClass = persistedClass;
         this.fileHandler = classFileHandler;
         if (!xmlFileExists) {
             initXMLTransformer();
-            initXMLDocument(persistedClass,xmlRoot);
+            initXMLDocument();
         } else {
-            refreshPersistedObjects(getRootXmlElementName(),getItemXmlElementName());
+            refreshPersistedObjects();
         }
     }
+
     public abstract String getRootXmlElementName();
 
     public abstract String getItemXmlElementName();
 
     public abstract void performPersist(PersistEntityEvent persistEntityEvent);
 
-    public abstract void persistObject(Object object,PersistenceManager persistenceManager);
+    public abstract void persistObject(Object object, PersistenceManager persistenceManager);
 
     public abstract Object getObjectById(Long objectId);
 
@@ -96,15 +99,19 @@ public abstract class AbstractClassManager {
 
     }
 
-    protected void initXMLDocument(Class<?> persistedClass, String rootElementName) {
+    protected void initXMLDocument() {
         initXMLDocumentBuilder();
-        rootElement = xmlDocument.createElement(rootElementName);
-        rootElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_NAME,persistedClass.getName());
+        Element systemRoot = xmlDocument.createElement(PersistenceContext.XML_NODBPERSISTENCE);
+        xmlDocument.appendChild(systemRoot);
+        rootElement = xmlDocument.createElement(getRootXmlElementName());
+        systemRoot.appendChild(rootElement);
+        rootElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_NAME, persistedClass.getName());
         Attr idGenAttr = xmlDocument.createAttribute(PersistenceContext.XML_ELEMENT_ID_GENERATOR);
         idGenerator = new IdGenerator(idGenAttr);
         rootElement.setAttributeNode(idGenAttr);
-        xmlDocument.appendChild(rootElement);
+
     }
+
     /**
      * Delete whitespace nodes from XML.
      */
@@ -118,10 +125,14 @@ public abstract class AbstractClassManager {
         }
     }
 
-    void flushXMLDocument() throws TransformerException, FileNotFoundException {
-        DOMSource source = new DOMSource(xmlDocument);
-        StreamResult result = new StreamResult(fileHandler.getXMLOutputStream());
-        transformer.transform(source, result);
+    public void flushXMLDocument() {
+        try {
+            DOMSource source = new DOMSource(xmlDocument);
+            StreamResult result = new StreamResult(fileHandler.getXMLOutputStream());
+            transformer.transform(source, result);
+        } catch (FileNotFoundException | TransformerException e) {
+            throw new PersistenceException(e);
+        }
     }
 
     public Object performLoad(Long objectId) {
@@ -129,7 +140,7 @@ public abstract class AbstractClassManager {
     }
 
     public boolean isAlreadyPersisted(Long objectId) {
-        return idToNode.containsKey(objectId);
+        return idToElement.containsKey(objectId);
     }
 
     public boolean isInProgress(String reference) {
@@ -150,17 +161,12 @@ public abstract class AbstractClassManager {
     }
 
     public void registerObject(Object object, Long objectId) {
-        this.idToObject.put(objectId,object);
-        this.objectToId.put(object,objectId);
+        this.idToObject.put(objectId, object);
+        this.objectToId.put(object, objectId);
     }
 
     public Element getObjectNodeById(Long objectId) {
-        Node node = queryXMLModel("/" + getRootXmlElementName() + "/" + getItemXmlElementName() + "[@" + PersistenceContext.XML_ATTRIBUTE_OBJECT_ID + "=" + objectId + "]");
-        if (node instanceof Element) {
-            return (Element) node;
-        } else {
-            throw new PersistenceException("Object node with ObjectId " + objectId + "not found.");
-        }
+        return idToElement.get(objectId);
     }
 
     public String getFullReference(Object object) {
@@ -172,9 +178,6 @@ public abstract class AbstractClassManager {
     }
 
     public Object getObjectByReference(String reference) throws ClassNotFoundException {
-        if (persistenceContext.isReferenceRegistered(reference)) {
-            return persistenceContext.getObjectByReference(reference);
-        }
         String[] parsedReference = reference.split("#");
         String className = parsedReference[0];
         Long cascadeObjectId = Long.parseLong(parsedReference[1]);
@@ -191,10 +194,13 @@ public abstract class AbstractClassManager {
      * @param persistenceManager persistence manager of event to store the object if part of collection
      */
     protected void createXMLStructure(Element xmlField, Object object, PersistenceManager persistenceManager) {
-        if (object == null) {           // null for all null values
+        if (object == null) { // null for all null value
             xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL, Boolean.TRUE.toString());
-        }else if (object.getClass().isEnum() || ClassHelper.isSimpleValueType(object.getClass())) { // if object type is enum, primitive or its wrapper
-            xmlField.appendChild(xmlDocument.createTextNode(object.toString()));
+        } else if (object.getClass().isEnum() || ClassHelper.isSimpleValueType(object.getClass())) { // if object type is enum, primitive or its wrapper
+            if (ClassHelper.isSimpleValueType(object.getClass())) {
+                xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS, object.getClass().getName());
+            }
+            xmlField.setTextContent(object.toString());
         } else {
             AbstractClassManager classManager;
             if (object.getClass().isArray()) { // is array
@@ -212,13 +218,23 @@ public abstract class AbstractClassManager {
 
     }
 
-    protected void refreshPersistedObjects(String rootElementName, String itemElementName) {
+    protected void refreshPersistedObjects() {
         initXMLDocumentBuilder();
         initXMLTransformer();
         try {
             xmlDocument = documentBuilder.parse(fileHandler.getXmlClassFile());
-            Element rootElementLocal = xmlDocument.getDocumentElement();
-            if (rootElementLocal.getNodeName().equals(rootElementName)) {
+            Element systemRoot = xmlDocument.getDocumentElement();
+            NodeList nodeList = systemRoot.getElementsByTagName(getRootXmlElementName());
+            if (nodeList.getLength() != 1) {
+                throw new XMLParseException("Multiple " + getRootXmlElementName() + " root element defined.");
+            }
+            Element rootElementLocal;
+            if (nodeList.item(0).getNodeType() == Node.ELEMENT_NODE) {
+                rootElementLocal = (Element) nodeList.item(0);
+            } else {
+                throw new XMLParseException("XML bad syntax for nodbpersistence.");
+            }
+            if (rootElementLocal.getNodeName().equals(getRootXmlElementName())) {
                 rootElement = rootElementLocal;
                 if (rootElement.hasAttribute(PersistenceContext.XML_ELEMENT_ID_GENERATOR)) {
                     Attr idGenAttr = rootElementLocal.getAttributeNode(PersistenceContext.XML_ELEMENT_ID_GENERATOR);
@@ -229,19 +245,24 @@ public abstract class AbstractClassManager {
             } else {
                 throw new XMLParseException();
             }
-            NodeList objectNodes = rootElement.getElementsByTagName(itemElementName);
+            NodeList objectNodes = rootElement.getElementsByTagName(getItemXmlElementName());
             for (int i = 0; i < objectNodes.getLength(); i++) {
                 Node node = objectNodes.item(i);
                 if (node.getNodeType() == Node.ELEMENT_NODE) {
-                    Long objectId = Long.parseLong(((Element) node).getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID));
-                    idToNode.put(objectId, node);
+                    Element element = (Element) node;
+                    String idString = element.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID);
+                    if (idString == "") {
+                        throw new XMLParseException("No object Id present");
+                    }
+                    idToElement.put(Long.parseLong(idString), element);
+
                 }
             }
             normalizeXMLModel();
 
 
         } catch (SAXException | IOException | XMLParseException e) {
-
+            throw new PersistenceException(e);
         }
     }
 
@@ -269,6 +290,7 @@ public abstract class AbstractClassManager {
     }
 
     public String persistAndGetReference(Object object, PersistenceManager persistenceManager) {
+        persistenceManager.addModifiedClassManager(this);
         if (!persistedClass.isAssignableFrom(object.getClass())) {
             throw new PersistenceException("Bad class manager.");
         }
@@ -278,7 +300,67 @@ public abstract class AbstractClassManager {
         return getFullReference(object);
     }
 
-    public void registerTempReference(String reference) {
+    protected void setFieldValue(Field field, Object object, Object newValue) {
+        try {
+            boolean isFinal = false;
+            boolean finalFieldAccess = false;
+            Field modifiersField = Field.class.getDeclaredField("modifiers");
+            Object localObject;
+            if (Modifier.isFinal(field.getModifiers())) {
+                finalFieldAccess = modifiersField.canAccess(field);
+                modifiersField.setAccessible(true);
+                modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+                isFinal = true;
+            }
+            if (Modifier.isStatic(field.getModifiers())) {
+                localObject = null;
+            } else {
+                localObject = object;
+            }
+            boolean fieldAccess = field.canAccess(localObject);
+            field.setAccessible(true);
+            field.set(localObject,newValue);
+            field.setAccessible(fieldAccess);
 
+            if (isFinal) {
+                modifiersField.setInt(field, field.getModifiers() & Modifier.FINAL);
+                modifiersField.setAccessible(finalFieldAccess);
+            }
+        }catch (Exception e) {
+            throw new PersistenceException(e);
+        }
+    }
+
+    protected Object getFieldValue(Field field, Object object) {
+        try {
+            Object result;
+            boolean isFinal = false;
+            boolean finalFieldAccess = false;
+            Field modifiersField = Field.class.getDeclaredField("modifiers");
+            Object localObject;
+            if (Modifier.isFinal(field.getModifiers())) {
+                finalFieldAccess = modifiersField.canAccess(field);
+                modifiersField.setAccessible(true);
+                modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+                isFinal = true;
+            }
+            if (Modifier.isStatic(field.getModifiers())) {
+                localObject = null;
+            } else {
+                localObject = object;
+            }
+            boolean fieldAccess = field.canAccess(localObject);
+            field.setAccessible(true);
+            result = field.get(localObject);
+            field.setAccessible(fieldAccess);
+
+            if (isFinal) {
+                modifiersField.setInt(field, field.getModifiers() & Modifier.FINAL);
+                modifiersField.setAccessible(finalFieldAccess);
+            }
+            return result;
+        }catch (Exception e) {
+            throw new PersistenceException(e);
+        }
     }
 }

@@ -7,6 +7,8 @@ public class Test3 extends Test2 {
     @ObjectId
     public Long objectId;
 
+    public final static HashMap<Integer,String> testStatic = new HashMap<>();
+
     public List[] strings = new List[3];
 
     public Map<String,Integer> map = new HashMap<>();

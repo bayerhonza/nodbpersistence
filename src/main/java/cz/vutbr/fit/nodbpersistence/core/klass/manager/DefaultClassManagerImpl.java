@@ -1,6 +1,7 @@
 package cz.vutbr.fit.nodbpersistence.core.klass.manager;
 
 import cz.vutbr.fit.nodbpersistence.annotations.ObjectId;
+import cz.vutbr.fit.nodbpersistence.annotations.Transient;
 import cz.vutbr.fit.nodbpersistence.core.PersistenceContext;
 import cz.vutbr.fit.nodbpersistence.core.PersistenceManager;
 import cz.vutbr.fit.nodbpersistence.core.events.PersistEntityEvent;
@@ -9,21 +10,17 @@ import cz.vutbr.fit.nodbpersistence.core.helpers.ConvertStringToType;
 import cz.vutbr.fit.nodbpersistence.core.helpers.XmlException;
 import cz.vutbr.fit.nodbpersistence.core.helpers.XmlHelper;
 import cz.vutbr.fit.nodbpersistence.core.storage.ClassFileHandler;
+import cz.vutbr.fit.nodbpersistence.core.storage.XMLParseException;
 import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
-import org.objenesis.ObjenesisStd;
-import org.objenesis.instantiator.ObjectInstantiator;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import javax.xml.transform.TransformerException;
-import java.io.FileNotFoundException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -39,9 +36,11 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
     public static final String XML_ELEMENT_INHERITED = "inherited";
     public static final String XML_ATTRIBUTE_INHERITED_CLASS = "inherClass";
 
-    public static final String XML_ATTRIBUTE_ARRAY_SIZE = "size";
+    public static final String XML_ELEMENT_STATIC_PART = "static";
 
-    private final ObjectInstantiator objectInstantiator;
+    private Constructor noArgConstructor;
+    private Element staticXmlElement;
+    private HashMap<Field, Element> staticElements = new HashMap<>();
 
     private final Field objectIdField;
 
@@ -54,9 +53,14 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
      * @param classFileHandler   handler of file for class
      */
     public DefaultClassManagerImpl(PersistenceContext persistenceContext, Class<?> persistedClass, boolean xmlFileExists, ClassFileHandler classFileHandler) {
-        super(persistenceContext, xmlFileExists, persistedClass, classFileHandler, XML_ELEMENT_ROOT);
+        super(persistenceContext, xmlFileExists, persistedClass, classFileHandler);
         this.objectIdField = getObjectIdField();
-        this.objectInstantiator = new ObjenesisStd().getInstantiatorOf(persistedClass);
+        this.noArgConstructor = getNoArgConstructor();
+        if (!xmlFileExists) {
+            createXmlStaticElement();
+        } else {
+            registerStaticXmlElement();
+        }
 
     }
 
@@ -81,6 +85,107 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
         }
     }
 
+    private Constructor getNoArgConstructor() {
+        try {
+            return persistedClass.getConstructor();
+        } catch (NoSuchMethodException e) {
+            throw new PersistenceException("No public constructor found for class " + persistedClass.getCanonicalName() + ".");
+        }
+    }
+
+    private void createXmlStaticElement() {
+        Field[] declaredFields = persistedClass.getDeclaredFields();
+        for (Field field : declaredFields) {
+            if (field.isAnnotationPresent(Transient.class)) {
+                continue;
+            }
+            if (Modifier.isStatic(field.getModifiers())) {
+                staticXmlElement = xmlDocument.createElement(XML_ELEMENT_STATIC_PART);
+                rootElement.appendChild(staticXmlElement);
+                return;
+            }
+        }
+    }
+
+    private void registerStaticXmlElement() {
+        NodeList nodeList = xmlDocument.getElementsByTagName(XML_ELEMENT_STATIC_PART);
+        if (nodeList.getLength() > 1) {
+            throw new PersistenceException("XML parse error of static fiedls.");
+        }
+        if (nodeList.getLength() == 0) {
+            return;
+        }
+        Node node = nodeList.item(0);
+        if (node.getNodeType() == Node.ELEMENT_NODE) {
+            staticXmlElement = (Element) node;
+        }
+
+        NodeList fieldNodeList = staticXmlElement.getElementsByTagName(XML_ATTRIBUTE_FIELD);
+        if (fieldNodeList.getLength() == 0) {
+            return;
+        }
+
+        for (int i = 0; i < fieldNodeList.getLength(); i++) {
+            Node fieldNode = fieldNodeList.item(i);
+            if (fieldNode.getNodeType() == Node.ELEMENT_NODE) {
+                Element fieldElement = (Element) fieldNode;
+                String fieldName = fieldElement.getAttribute(PersistenceContext.XML_ATTRIBUTE_NAME);
+                try {
+                    Field staticField = persistedClass.getDeclaredField(fieldName);
+                    staticElements.put(staticField,fieldElement);
+                } catch (NoSuchFieldException e) {
+                    throw new PersistenceException(e);
+                }
+            }
+        }
+
+    }
+
+    private void addOrEditStatic(Field staticField, PersistenceManager persistenceManager) {
+        Element staticFieldXml;
+        if (!staticElements.containsKey(staticField)) {
+            staticFieldXml = xmlDocument.createElement(XML_ATTRIBUTE_FIELD);
+            staticXmlElement.appendChild(staticFieldXml);
+            staticFieldXml.setAttribute(PersistenceContext.XML_ATTRIBUTE_NAME, staticField.getName());
+            staticElements.put(staticField, staticFieldXml);
+        } else {
+            staticFieldXml = staticElements.get(staticField);
+        }
+
+        Object fieldValue = getFieldValue(staticField, null);
+        createXMLStructure(staticFieldXml, fieldValue, persistenceManager);
+    }
+
+    public void loadStaticFields() {
+        try {
+            NodeList nodeList = rootElement.getElementsByTagName(XML_ELEMENT_STATIC_PART);
+            if (nodeList.getLength() > 1) {
+                throw new XMLParseException("Multiple static parts defined.");
+            }
+            if (nodeList.getLength() == 0) {
+                return;
+            }
+            if (nodeList.item(0).getNodeType() != Node.ELEMENT_NODE) {
+                throw new XMLParseException("Bad XML syntax.");
+            }
+            Element staticElement = (Element) nodeList.item(0);
+            NodeList staticFieldNodeList = staticElement.getElementsByTagName(XML_ATTRIBUTE_FIELD);
+            for (int i = 0; i < staticFieldNodeList.getLength(); i++) {
+                Node node = staticFieldNodeList.item(i);
+                if (node.getNodeType() == Node.ELEMENT_NODE) {
+                    Element element = (Element) node;
+                    Object staticValue = loadObjectFromElement(element);
+                    String staticFieldName = element.getAttribute(PersistenceContext.XML_ATTRIBUTE_NAME);
+                    Field staticField = persistedClass.getDeclaredField(staticFieldName);
+                    setFieldValue(staticField, null, staticValue);
+                }
+            }
+
+        } catch (Exception e) {
+            throw new PersistenceException(e);
+        }
+    }
+
     private void updateObject(Long objectId, Object object) {
         boolean isDirty = checkIfDirty(objectId, object);
         if (isDirty) {
@@ -100,19 +205,16 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
                     throw new PersistenceException(e);
                 }
             }
-            try {
-                flushXMLDocument();
-            } catch (TransformerException | FileNotFoundException e) {
-                throw new PersistenceException(e);
-            }
         }
     }
 
     @Override
     public void persistObject(Object object, PersistenceManager persistenceManager) {
+        persistenceManager.addModifiedClassManager(this);
+        ;
         //System.out.println("persisting " + object.getClass().getName() + "#" + objectId);
         Long objectId = getObjectId(object);
-        registerObject(object,objectId);
+        registerObject(object, objectId);
         try {
             // top level XML element <object>
             Element persistedObjectElement = xmlDocument.createElement(XML_ELEMENT_OBJECT);
@@ -137,9 +239,8 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
 
             //objectsInProgress.remove(objectId);
             registerObject(object, objectId);
-            idToNode.put(objectId, persistedObjectElement);
-            flushXMLDocument();
-        } catch (IllegalAccessException | FileNotFoundException | TransformerException e) {
+            idToElement.put(objectId, persistedObjectElement);
+        } catch (IllegalAccessException e) {
             throw new PersistenceException(e);
         }
     }
@@ -167,56 +268,46 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
                                  Object object,
                                  PersistenceManager persistenceManager) throws IllegalAccessException {
         for (Field field : fields) {
-            if (field.isAnnotationPresent(ObjectId.class)) {
+            if (field.isAnnotationPresent(ObjectId.class) || field.isAnnotationPresent(Transient.class)) {
                 continue;
             }
 
             // XML element for field of class, format <field name="nameOfField">value</field>
-            Element fieldXmlElement = xmlDocument.createElement(XML_ATTRIBUTE_FIELD);
-            objectXmlElement.appendChild(fieldXmlElement);
-            fieldXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_NAME, field.getName());
+
+            if (Modifier.isStatic(field.getModifiers())) {
+                addOrEditStatic(field, persistenceManager);
+            } else {
+                Element fieldXmlElement = xmlDocument.createElement(XML_ATTRIBUTE_FIELD);
+                objectXmlElement.appendChild(fieldXmlElement);
+                fieldXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_NAME, field.getName());
+                Object fieldValue = getFieldValue(field, object);
+                createXMLStructure(fieldXmlElement, fieldValue, persistenceManager);
+
+            }
 
 
-            boolean accessible = field.canAccess(object);
-            field.setAccessible(true);
-
-            // check the type of the field
-
-            Object fieldValue = field.get(object);
-            createXMLStructure(fieldXmlElement, fieldValue, persistenceManager);
-            field.setAccessible(accessible);
         }
     }
 
     @Override
     public Long getObjectId(Object object) throws PersistenceException {
-        if (!object.getClass().equals(persistedClass)) {
-            throw new PersistenceException("Wrong Class Manager.");
-        }
-        try {
-            boolean accessibility = objectIdField.canAccess(object);
-            objectIdField.setAccessible(true);
-            Class<?> fieldType = objectIdField.getType();
-            Long objectIdValue;
+        Class<?> fieldType = objectIdField.getType();
+        Long objectIdValue;
 
-            // TODO support more type of objectId
+        // TODO support more type of objectId
 
-            if (fieldType.equals(Long.class) || fieldType.equals(long.class)) {
-                objectIdValue = (Long) objectIdField.get(object);
-            } else {
-                throw new PersistenceException("Object ID type not supported in " + object.getClass().getName()
-                        + ":" + objectIdField.getName() + ".");
-            }
-            if (objectIdValue == null || objectIdValue == 0) {
-                Long idNext = idGenerator.getNextId();
-                objectIdField.set(object, idNext);
-                objectIdValue = idNext;
-            }
-            objectIdField.setAccessible(accessibility);
-            return objectIdValue;
-        } catch (IllegalAccessException e) {
-            throw new PersistenceException(e);
+        if (fieldType.equals(Long.class) || fieldType.equals(long.class)) {
+            objectIdValue = (Long) getFieldValue(objectIdField, object);
+        } else {
+            throw new PersistenceException("Object ID type not supported in " + object.getClass().getName()
+                    + ":" + objectIdField.getName() + ".");
         }
+        if (objectIdValue == null || objectIdValue == 0) {
+            Long idNext = idGenerator.getNextId();
+            setFieldValue(objectIdField, object, idNext);
+            objectIdValue = idNext;
+        }
+        return objectIdValue;
     }
 
     private Node getObjectAttributeByName(Long objectId, String name) {
@@ -238,9 +329,14 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
     }
 
     private Object loadObject(Element objectElement) {
-        Object newObj = objectInstantiator.newInstance();
+        Object newObj;
+        try {
+            newObj = noArgConstructor.newInstance();
+        } catch (Exception e) {
+            throw new PersistenceException(e);
+        }
         Long objectId = Long.valueOf(objectElement.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID));
-        registerObject(newObj,objectId);
+        registerObject(newObj, objectId);
         //persistenceContext.registerReference(ClassHelper.createReferenceString(newObj.getClass(), objectId), newObj);
 
         // setting of objectID
@@ -299,14 +395,16 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
         try {
             for (Field field : classFields) {
 
-                if (field.isAnnotationPresent(ObjectId.class)) {
+                if (field.isAnnotationPresent(ObjectId.class) || field.isAnnotationPresent(Transient.class)) {
+                    continue;
+                }
+                if (Modifier.isStatic(field.getModifiers())) {
                     continue;
                 }
                 Element fieldXmlElement = XmlHelper.getChildByNameAndAttribute(parent, XML_ATTRIBUTE_FIELD, PersistenceContext.XML_ATTRIBUTE_NAME, field.getName());
                 boolean accessibility = field.canAccess(newObject);
                 field.setAccessible(true);
 
-                // TODO support collections and non primitive types
                 if (fieldXmlElement.hasAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL)) {
                     field.set(newObject, null);
                 } else if (field.getType().isEnum()) {

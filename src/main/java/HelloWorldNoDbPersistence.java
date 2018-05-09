@@ -90,13 +90,6 @@ class HelloWorldNoDbPersistence {
         System.out.println(System.getProperty("java.version"));
         System.out.println(System.getProperty("java.specification.vendor"));
 
-        Test3 test3inheritance = (Test3) ClassHelper.instantiateClass(Test3.class);
-
-        System.out.println(System.identityHashCode(test3inheritance));
-        //test3inheritance.objectId = "aaaaa";
-        //((Test1) test3inheritance).objectId = "bbbbbb";
-        System.out.println(test3inheritance.objectId);
-        System.out.println(((Test1) test3inheritance).objectId);
 
         List<Field> fields = new ArrayList<>();
         Class<?> klazz = Test3.class;
@@ -104,7 +97,7 @@ class HelloWorldNoDbPersistence {
             fields.addAll(Arrays.asList(klazz.getDeclaredFields()));
             klazz = klazz.getSuperclass();
         }
-        fields.forEach(field -> {
+        /*fields.forEach(field -> {
             try {
                 field.setAccessible(true);
                 String fieldName = field.getName();
@@ -117,7 +110,7 @@ class HelloWorldNoDbPersistence {
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
-        });
+        });*/
 
 
         //System.out.println("elapsed time: " + TimeUnit.NANOSECONDS.toMillis(elapsedTime)/1000.0 + "s");

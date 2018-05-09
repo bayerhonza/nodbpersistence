@@ -24,7 +24,7 @@ public class CollectionManager extends AbstractClassManager {
 
 
     public CollectionManager(PersistenceContext persistenceContext,Class<?> persistedClass, boolean xmlFileExists, ClassFileHandler classFileHandler) {
-        super(persistenceContext, xmlFileExists, persistedClass, classFileHandler, XML_ELEMENT_ROOT_COLLECTIONS);
+        super(persistenceContext, xmlFileExists, persistedClass, classFileHandler);
     }
 
 
@@ -59,13 +59,6 @@ public class CollectionManager extends AbstractClassManager {
 
         createXMLCollection(collectionObject, collectionXmlElement, persistenceManager);
         registerObject(collectionObject, collectionId);
-
-        try {
-            flushXMLDocument();
-        } catch (TransformerException | FileNotFoundException e) {
-            throw new PersistenceException(e);
-        }
-
     }
 
     @Override
@@ -91,7 +84,6 @@ public class CollectionManager extends AbstractClassManager {
                 xmlItemElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL,Boolean.TRUE.toString());
                 continue;
             }
-            xmlItemElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS,o.getClass().getName());
             parentField.appendChild(xmlItemElement);
             createXMLStructure(xmlItemElement, o, persistenceManager);
         }
@@ -99,8 +91,6 @@ public class CollectionManager extends AbstractClassManager {
 
     @SuppressWarnings("unchecked")
     public Object loadCollection(Element node) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
-        Long arrayId = Long.valueOf(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID));
-        System.out.println(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS));
         Class<?> collectionClass = Class.forName(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS));
         Constructor collectionConstructor = collectionClass.getConstructor();
         Collection newCollection = (Collection) collectionConstructor.newInstance();

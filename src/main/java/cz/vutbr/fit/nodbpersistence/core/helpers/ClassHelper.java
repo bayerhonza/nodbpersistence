@@ -1,12 +1,5 @@
 package cz.vutbr.fit.nodbpersistence.core.helpers;
 
-import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
-import org.objenesis.Objenesis;
-import org.objenesis.ObjenesisStd;
-import sun.reflect.ReflectionFactory;
-
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URL;
 import java.util.Date;
@@ -20,15 +13,16 @@ public class ClassHelper {
      * Checks if class is primitive type or its wrapper, or other simple type.
      * Simple types:
      * <ul>
-     *     <li>{@link Enum}</li>
-     *     <li>{@link CharSequence}</li>
-     *     <li>{@link Number}</li>
-     *     <li>{@link Date}</li>
-     *     <li>{@link URI}</li>
-     *     <li>{@link Locale}</li>
+     * <li>{@link Enum}</li>
+     * <li>{@link CharSequence}</li>
+     * <li>{@link Number}</li>
+     * <li>{@link Date}</li>
+     * <li>{@link URI}</li>
+     * <li>{@link Locale}</li>
      * </ul>
-     *
+     * <p>
      * Copied from <a href="https://github.com/spring-projects/spring-framework/blob/master/spring-beans/src/main/java/org/springframework/beans/BeanUtils.java">Spring project GitHub</a>
+     *
      * @param clazz type to check
      * @return {@code true} if is type is simple, else {@code false}
      */
@@ -51,29 +45,5 @@ public class ClassHelper {
         if (clazz.equals(Float.class) || clazz.equals(float.class)) return true;
         if (clazz.equals(Double.class) || clazz.equals(double.class)) return true;
         return false;
-    }
-
-    /**
-     * Instantiate a new object of desired class by using no-argument constructor.
-     *
-     * It is crucial that object be POJO!.
-     * @param klass desired class
-     * @param <T> paramater of class
-     * @return object of {@code T} instance
-     */
-    public static <T> Object instantiateClass(Class<T> klass) {
-        Objenesis objenesis = new ObjenesisStd(true);
-
-        try {
-            ReflectionFactory rf = ReflectionFactory.getReflectionFactory();
-            Constructor noArgConstrutor = rf.newConstructorForSerialization(klass);
-            return noArgConstrutor.newInstance();
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException  e) {
-            throw new PersistenceException(e);
-        }
-    }
-
-    public static String createReferenceString(Class<?> objectClass, Long objectId) {
-        return objectClass.getName() + "#" + objectId;
     }
 }

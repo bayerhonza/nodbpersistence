@@ -1,5 +1,6 @@
 package cz.vutbr.fit.nodbpersistence.core;
 
+import cz.vutbr.fit.nodbpersistence.annotations.ObjectId;
 import cz.vutbr.fit.nodbpersistence.core.events.EventTypeToListener;
 import cz.vutbr.fit.nodbpersistence.core.helpers.ClassHelper;
 import cz.vutbr.fit.nodbpersistence.core.klass.manager.*;
@@ -12,6 +13,7 @@ import cz.vutbr.fit.nodbpersistence.core.storage.StorageContext;
 import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceCoreException;
 import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
 
+import javax.swing.text.Document;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,8 +26,9 @@ import java.util.Properties;
 
 public class PersistenceContext {
 
-    public static final String PATH_TO_CONFIG = "\\resources\\persistence-nodb.xml";
 
+    public static final String PATH_TO_CONFIG = "\\resources\\persistence-nodb.xml";
+    public static final String XML_NODBPERSISTENCE = "nodbpersistence";
     public static final String ROOT_DIRECTORY_PROP = "rootDirectory";
 
     public static final String XML_ELEMENT_ID_GENERATOR = "id_gen";
@@ -50,7 +53,6 @@ public class PersistenceContext {
     private final ListenerRegistry listeners = new ListenerRegistry();
     private StorageContext storageContext;
     private final Map<Class<?>, DefaultClassManagerImpl> classClassManagerMap = new HashMap<>();
-    private final HashMap<String,Object> referencesCache = new HashMap<>();
 
     private CollectionManager collectionManager;
     private  MapManager mapManager;
@@ -199,15 +201,11 @@ public class PersistenceContext {
         listeners.registerListener(LoadEventListener.class, new LoadEventListener());
     }
 
-    public Object getObjectByReference(String reference) {
-        return referencesCache.get(reference);
-    }
-
-    public boolean isReferenceRegistered(String reference) {
-        return referencesCache.containsKey(reference);
-    }
-
     public String getFullReference(Class<?> klazz, Long objectId) {
         return klazz.getName() + "#" + objectId.toString();
+    }
+
+    public void refreshAllStaticFields() {
+        classClassManagerMap.forEach((aClass, defaultClassManager) -> defaultClassManager.loadStaticFields());
     }
 }

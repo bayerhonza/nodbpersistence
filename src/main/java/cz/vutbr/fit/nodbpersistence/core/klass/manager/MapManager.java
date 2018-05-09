@@ -26,7 +26,7 @@ public class MapManager extends AbstractClassManager {
     public static final String XML_ELEMENT_MAP_VALUE = "value";
 
     public MapManager(PersistenceContext persistenceContext,  Class<?> persistedClass, boolean xmlFileExists, ClassFileHandler classFileHandler) {
-        super(persistenceContext, xmlFileExists, persistedClass, classFileHandler,XML_ELEMENT_ROOT_MAP);
+        super(persistenceContext, xmlFileExists, persistedClass, classFileHandler);
     }
 
     @Override
@@ -52,15 +52,9 @@ public class MapManager extends AbstractClassManager {
         Long mapId = idGenerator.getNextId();
         mapXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID, mapId.toString());
         mapXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS, map.getClass().getName());
-        //objectsInProgress.add(mapId);
         createXMLMap(map, mapXmlElement, persistenceManager);
         registerObject(map,mapId);
-        //objectsInProgress.remove(mapId);
-        try {
-            flushXMLDocument();
-        } catch (TransformerException | FileNotFoundException e) {
-            throw new PersistenceException(e);
-        }
+
     }
 
     @Override
@@ -96,11 +90,9 @@ public class MapManager extends AbstractClassManager {
         Element xmlElement = xmlDocument.createElement(xmlElementName);
         rootXmlElement.appendChild(xmlElement);
         if (value == null) {
-            xmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL,Boolean.TRUE.toString());
+            xmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL, Boolean.TRUE.toString());
             return;
         }
-        xmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS,value.getClass().getName());
-
 
         createXMLStructure(xmlElement,value,persistenceManager);
     }

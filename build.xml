@@ -4,9 +4,8 @@
     <property name="src.dir" value="src/"/>
     <property name="lib.dir" value="lib/"/>
     <property name="dest.dir" value="dest/"/>
-    <property name="persistence.root" value="D:\Documents\FIT\3BIT\IBP\persisted_objects\"/>
 
-    <path id="master-classpath">
+    <path id="build.classpath">
         <fileset dir = "${lib.dir}">
             <include name="*.jar"/>
         </fileset>
@@ -17,19 +16,12 @@
         <mkdir dir="${dest.dir}"/>
 
         <javac destdir="${build.dir}" source="1.9" target="1.9" includeantruntime="true">
-            <src path="${src.dir}"/>
-            <classpath refid="master-classpath"/>
+            <src path="${src.dir}/main"/>
+            <classpath refid="build.classpath"/>
             <compilerarg value="-Xlint:unchecked"/>
         </javac>
-        <jar destfile="${dest.dir}/test.jar" basedir="${build.dir}">
+        <jar destfile="${dest.dir}/nodbpersistence.jar" filesetmanifest="skip">
             <zipgroupfileset dir="${lib.dir}" includes="*.jar"/>
-            <manifest>
-                <attribute name="Main-Class" value="Hello"/>
-            </manifest>
         </jar>
-    </target>
-
-    <target name="clean">
-        <delete dir="${persistence.root}"/>
     </target>
 </project>
