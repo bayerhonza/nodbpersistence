@@ -6,6 +6,9 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
 
+/**
+ * Class for files.
+ */
 public class ClassFileHandler {
 
     private final File xmlClassFile;

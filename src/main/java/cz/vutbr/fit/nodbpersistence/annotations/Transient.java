@@ -3,14 +3,7 @@ package cz.vutbr.fit.nodbpersistence.annotations;
 import java.lang.annotation.*;
 
 /**
- * <p>Annotation of ObjectId</p>
- *
- * <p></p>Currently supported types are:
- * <ul>
- * <li><code>int</code> and its wrapper {@link Integer}</li>
- *
- * </ul>
- * </p>
+ * Attributes annotated by {@link Transient} will not be persisted and are ignored by the system.
  */
 
 @Documented

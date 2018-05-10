@@ -3,13 +3,12 @@ package cz.vutbr.fit.nodbpersistence.core.events;
 import cz.vutbr.fit.nodbpersistence.core.PersistenceManager;
 
 /**
- * Event for loading objects form persistence. {@code objectId} is the ID parameter of desired object. {@code klazz} is
- * class of new object.
+ * Event for loading objects form persistence.
  */
 public class LoadEntityEvent extends EntityEvent {
 
-    private Long objectId;
-    private Class<?> klazz;
+    private final Long objectId;
+    private final Class<?> klazz;
 
     public LoadEntityEvent(PersistenceManager source, Long objectId, Class<?> klazz) {
         super(null, source);
@@ -17,10 +16,20 @@ public class LoadEntityEvent extends EntityEvent {
         this.klazz = klazz;
     }
 
+    /**
+     * Getter for objectId of desired object.
+     *
+     * @return objectId of desired object
+     */
     public Long getObjectId() {
         return objectId;
     }
 
+    /**
+     * Getter for desired class
+     *
+     * @return desired class
+     */
     public Class<?> getLoadedClass() {
         return klazz;
     }

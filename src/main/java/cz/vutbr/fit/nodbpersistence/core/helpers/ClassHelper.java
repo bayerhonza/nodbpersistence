@@ -1,5 +1,9 @@
 package cz.vutbr.fit.nodbpersistence.core.helpers;
 
+import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.net.URL;
 import java.util.Date;
@@ -36,6 +40,12 @@ public class ClassHelper {
                 Locale.class == clazz || Class.class == clazz);
     }
 
+    /**
+     * Checks if the given class is a primitive type or its wrapper.
+     *
+     * @param clazz class to check
+     * @return true if is primitive, else false
+     */
     public static boolean isPrimitiveOrWrapper(Class<?> clazz) {
         if (clazz.equals(Boolean.class) || clazz.equals(boolean.class)) return true;
         if (clazz.equals(Byte.class) || clazz.equals(byte.class)) return true;
@@ -43,7 +53,70 @@ public class ClassHelper {
         if (clazz.equals(Integer.class) || clazz.equals(int.class)) return true;
         if (clazz.equals(Long.class) || clazz.equals(long.class)) return true;
         if (clazz.equals(Float.class) || clazz.equals(float.class)) return true;
-        if (clazz.equals(Double.class) || clazz.equals(double.class)) return true;
-        return false;
+        return clazz.equals(Double.class) || clazz.equals(double.class);
+    }
+
+    public static void setFieldValue(Field field, Object object, Object newValue) {
+        try {
+            boolean isFinal = false;
+            boolean finalFieldAccess = false;
+            Field modifiersField = Field.class.getDeclaredField("modifiers");
+            Object localObject;
+            if (Modifier.isFinal(field.getModifiers())) {
+                finalFieldAccess = modifiersField.canAccess(field);
+                modifiersField.setAccessible(true);
+                modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+                isFinal = true;
+            }
+            if (Modifier.isStatic(field.getModifiers())) {
+                localObject = null;
+            } else {
+                localObject = object;
+            }
+            boolean fieldAccess = field.canAccess(localObject);
+            field.setAccessible(true);
+            field.set(localObject, newValue);
+            field.setAccessible(fieldAccess);
+
+            if (isFinal) {
+                modifiersField.setInt(field, field.getModifiers() & Modifier.FINAL);
+                modifiersField.setAccessible(finalFieldAccess);
+            }
+        } catch (Exception e) {
+            throw new PersistenceException(e);
+        }
+    }
+
+    public static Object getFieldValue(Field field, Object object) {
+        try {
+            Object result;
+            boolean isFinal = false;
+            boolean finalFieldAccess = false;
+            Field modifiersField = Field.class.getDeclaredField("modifiers");
+            Object localObject;
+            if (Modifier.isFinal(field.getModifiers())) {
+                finalFieldAccess = modifiersField.canAccess(field);
+                modifiersField.setAccessible(true);
+                modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+                isFinal = true;
+            }
+            if (Modifier.isStatic(field.getModifiers())) {
+                localObject = null;
+            } else {
+                localObject = object;
+            }
+            boolean fieldAccess = field.canAccess(localObject);
+            field.setAccessible(true);
+            result = field.get(localObject);
+            field.setAccessible(fieldAccess);
+
+            if (isFinal) {
+                modifiersField.setInt(field, field.getModifiers() & Modifier.FINAL);
+                modifiersField.setAccessible(finalFieldAccess);
+            }
+            return result;
+        } catch (Exception e) {
+            throw new PersistenceException(e);
+        }
     }
 }

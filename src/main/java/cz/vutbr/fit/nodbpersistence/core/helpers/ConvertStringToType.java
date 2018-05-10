@@ -6,7 +6,7 @@ import java.lang.reflect.Type;
 
 public class ConvertStringToType {
     /**
-     * https://stackoverflow.com/questions/13943550/how-to-convert-from-string-to-a-primitive-type-or-standard-java-wrapper-types
+     * Converts string value into desired type. The source code was copied from <a href="https://stackoverflow.com/questions/13943550/how-to-convert-from-string-to-a-primitive-type-or-standard-java-wrapper-types">Stack Overflow</a>
      *
      * @param type  type of result
      * @param value source value to be converted

@@ -20,40 +20,48 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import javax.xml.xpath.*;
+import javax.xml.xpath.XPathFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.Map;
 
+/**
+ * Abstract class for class managers.
+ */
 public abstract class AbstractClassManager {
 
     protected final PersistenceContext persistenceContext;
 
-    final Class<?> persistedClass;
+    protected final Class<?> persistedClass;
 
-
+    // map mapping objectId to its XML element
     protected final HashMap<Long, Element> idToElement = new HashMap<>();
+    // map mapping object to its objectId.
     protected final IdentityHashMap<Object, Long> objectToId = new IdentityHashMap<>();
+    // mapping objectId to its object
     protected final IdentityHashMap<Long, Object> idToObject = new IdentityHashMap<>();
-    protected final HashSet<String> objectsInProgress = new HashSet<>();
+
+    // objectId generator
     IdGenerator idGenerator;
 
     final ClassFileHandler fileHandler;
 
-    // XML model
-    protected DocumentBuilder documentBuilder;
+    // XML model part
+    private DocumentBuilder documentBuilder;
+    private Transformer transformer;
+    protected XPathFactory xPathFactory = XPathFactory.newInstance();
     protected Document xmlDocument;
     protected Element rootElement;
-    protected Transformer transformer;
-    protected XPathFactory xPathFactory = XPathFactory.newInstance();
+
 
     public AbstractClassManager(PersistenceContext persistenceContext, boolean xmlFileExists, Class<?> persistedClass, ClassFileHandler classFileHandler) {
         this.persistenceContext = persistenceContext;
         this.persistedClass = persistedClass;
         this.fileHandler = classFileHandler;
+        // if XML file exists, the objects are automatically loaded to memory
         if (!xmlFileExists) {
             initXMLTransformer();
             initXMLDocument();
@@ -62,69 +70,74 @@ public abstract class AbstractClassManager {
         }
     }
 
+    /**
+     * Tries to persist object. If the object is already persisted, it reaturns reference as a string.
+     * Otherwise it starts persisting the object.
+     *
+     * @param object             object to be persisted
+     * @param persistenceManager source persistence manager
+     * @return reference to the object as a string
+     */
+    public String persistAndGetReference(Object object, PersistenceManager persistenceManager) {
+        persistenceManager.addModifiedClassManager(this);
+        if (!persistedClass.isAssignableFrom(object.getClass())) {
+            throw new PersistenceException("Bad class manager.");
+        }
+        if (!objectToId.containsKey(object)) {
+            persistObject(object, persistenceManager);
+        }
+        return getFullReference(object);
+    }
+
+    /**
+     * Get root XML element for the class.
+     *
+     * @return root XML element.
+     */
     public abstract String getRootXmlElementName();
 
+    /**
+     * Get item XML element for the class.
+     *
+     * @return item XML element
+     */
     public abstract String getItemXmlElementName();
 
+    /**
+     * Processes the persist event.
+     *
+     * @param persistEntityEvent persist event
+     */
     public abstract void performPersist(PersistEntityEvent persistEntityEvent);
 
+    /**
+     * Persists given object in one persistence manager (source)
+     *
+     * @param object             object to be persisted
+     * @param persistenceManager source persistence manager
+     */
     public abstract void persistObject(Object object, PersistenceManager persistenceManager);
 
+    /**
+     * Finds object based on its objectId.
+     *
+     * @param objectId ojbectId
+     * @return object with defined objectId.
+     */
     public abstract Object getObjectById(Long objectId);
 
-    public abstract Long getObjectId(Object object);
-
+    /**
+     * Get class handled by this class manager.
+     *
+     * @return handled class
+     */
     public Class<?> getHandledClass() {
         return this.persistedClass;
     }
 
-    void initXMLDocumentBuilder() {
-        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-        try {
-            documentBuilder = documentBuilderFactory.newDocumentBuilder();
-        } catch (ParserConfigurationException e) {
-            throw new PersistenceException(e);
-        }
-        xmlDocument = documentBuilder.newDocument();
-    }
-
-    void initXMLTransformer() {
-        TransformerFactory transformerFactory = TransformerFactory.newInstance();
-        try {
-            transformer = transformerFactory.newTransformer();
-            //transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-        } catch (TransformerConfigurationException e) {
-            throw new PersistenceException(e);
-        }
-
-    }
-
-    protected void initXMLDocument() {
-        initXMLDocumentBuilder();
-        Element systemRoot = xmlDocument.createElement(PersistenceContext.XML_NODBPERSISTENCE);
-        xmlDocument.appendChild(systemRoot);
-        rootElement = xmlDocument.createElement(getRootXmlElementName());
-        systemRoot.appendChild(rootElement);
-        rootElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_NAME, persistedClass.getName());
-        Attr idGenAttr = xmlDocument.createAttribute(PersistenceContext.XML_ELEMENT_ID_GENERATOR);
-        idGenerator = new IdGenerator(idGenAttr);
-        rootElement.setAttributeNode(idGenAttr);
-
-    }
-
     /**
-     * Delete whitespace nodes from XML.
+     * Flushes the modifications and writes XML file to disk.
      */
-    void normalizeXMLModel() {
-        NodeList nodeList = rootElement.getChildNodes();
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            Node node = nodeList.item(i);
-            if (node.getNodeType() != Node.ELEMENT_NODE) {
-                rootElement.removeChild(node);
-            }
-        }
-    }
-
     public void flushXMLDocument() {
         try {
             DOMSource source = new DOMSource(xmlDocument);
@@ -135,40 +148,53 @@ public abstract class AbstractClassManager {
         }
     }
 
+    /**
+     * Launches loading.
+     *
+     * @param objectId objectId of loaded object
+     * @return loaded object
+     */
     public Object performLoad(Long objectId) {
         return getObjectById(objectId);
     }
 
+    /**
+     * Checks if the objectId is already persisted.
+     *
+     * @param objectId objectId
+     * @return true if present, false if not
+     */
     public boolean isAlreadyPersisted(Long objectId) {
         return idToElement.containsKey(objectId);
     }
 
-    public boolean isInProgress(String reference) {
-        return objectsInProgress.contains(reference);
-    }
-
-
-    Node queryXMLModel(String xmlPathQuery) {
-        XPath xPath = xPathFactory.newXPath();
-        Node objectNode;
-        try {
-            XPathExpression expr = xPath.compile(xmlPathQuery);
-            objectNode = (Node) expr.evaluate(xmlDocument, XPathConstants.NODE);
-        } catch (XPathExpressionException e) {
-            throw new PersistenceException(e);
-        }
-        return objectNode;
-    }
-
+    /**
+     * Register object as persisted.
+     *
+     * @param object   object
+     * @param objectId objectId of the object
+     */
     public void registerObject(Object object, Long objectId) {
         this.idToObject.put(objectId, object);
         this.objectToId.put(object, objectId);
     }
 
+    /**
+     * Get object element based on objectId.
+     *
+     * @param objectId objectId
+     * @return XML element with object
+     */
     public Element getObjectNodeById(Long objectId) {
         return idToElement.get(objectId);
     }
 
+    /**
+     * Return reference to the object in format className#objectId.
+     *
+     * @param object object
+     * @return reference as a string, {@code null} if object is not persisted
+     */
     public String getFullReference(Object object) {
         if (objectToId.containsKey(object)) {
             return persistedClass.getName() + "#" + objectToId.get(object).toString();
@@ -177,6 +203,13 @@ public abstract class AbstractClassManager {
         }
     }
 
+    /**
+     * Dereferences given string and finds desired object.
+     *
+     * @param reference reference as a string
+     * @return references object
+     * @throws ClassNotFoundException internal error
+     */
     public Object getObjectByReference(String reference) throws ClassNotFoundException {
         String[] parsedReference = reference.split("#");
         String className = parsedReference[0];
@@ -218,6 +251,9 @@ public abstract class AbstractClassManager {
 
     }
 
+    /**
+     * Reload objects into memory after parsing already existing XML file.
+     */
     protected void refreshPersistedObjects() {
         initXMLDocumentBuilder();
         initXMLTransformer();
@@ -251,7 +287,7 @@ public abstract class AbstractClassManager {
                 if (node.getNodeType() == Node.ELEMENT_NODE) {
                     Element element = (Element) node;
                     String idString = element.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID);
-                    if (idString == "") {
+                    if (idString.equals("")) {
                         throw new XMLParseException("No object Id present");
                     }
                     idToElement.put(Long.parseLong(idString), element);
@@ -266,7 +302,14 @@ public abstract class AbstractClassManager {
         }
     }
 
-    protected Object loadObjectFromElement(Element element) throws ClassNotFoundException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+    /**
+     * Can load an object from an XML element.
+     *
+     * @param element XML element
+     * @return object included in the XML element
+     * @throws Exception if reflection fails
+     */
+    protected Object loadObjectFromElement(Element element) throws Exception {
         if (element.hasAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL)) {
             return null;
         }
@@ -289,78 +332,49 @@ public abstract class AbstractClassManager {
         }
     }
 
-    public String persistAndGetReference(Object object, PersistenceManager persistenceManager) {
-        persistenceManager.addModifiedClassManager(this);
-        if (!persistedClass.isAssignableFrom(object.getClass())) {
-            throw new PersistenceException("Bad class manager.");
-        }
-        if (!objectToId.containsKey(object)) {
-            persistObject(object, persistenceManager);
-        }
-        return getFullReference(object);
-    }
 
-    protected void setFieldValue(Field field, Object object, Object newValue) {
+    private void initXMLDocumentBuilder() {
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         try {
-            boolean isFinal = false;
-            boolean finalFieldAccess = false;
-            Field modifiersField = Field.class.getDeclaredField("modifiers");
-            Object localObject;
-            if (Modifier.isFinal(field.getModifiers())) {
-                finalFieldAccess = modifiersField.canAccess(field);
-                modifiersField.setAccessible(true);
-                modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-                isFinal = true;
-            }
-            if (Modifier.isStatic(field.getModifiers())) {
-                localObject = null;
-            } else {
-                localObject = object;
-            }
-            boolean fieldAccess = field.canAccess(localObject);
-            field.setAccessible(true);
-            field.set(localObject,newValue);
-            field.setAccessible(fieldAccess);
-
-            if (isFinal) {
-                modifiersField.setInt(field, field.getModifiers() & Modifier.FINAL);
-                modifiersField.setAccessible(finalFieldAccess);
-            }
-        }catch (Exception e) {
+            documentBuilder = documentBuilderFactory.newDocumentBuilder();
+        } catch (ParserConfigurationException e) {
             throw new PersistenceException(e);
         }
+        xmlDocument = documentBuilder.newDocument();
     }
 
-    protected Object getFieldValue(Field field, Object object) {
+    private void initXMLTransformer() {
+        TransformerFactory transformerFactory = TransformerFactory.newInstance();
         try {
-            Object result;
-            boolean isFinal = false;
-            boolean finalFieldAccess = false;
-            Field modifiersField = Field.class.getDeclaredField("modifiers");
-            Object localObject;
-            if (Modifier.isFinal(field.getModifiers())) {
-                finalFieldAccess = modifiersField.canAccess(field);
-                modifiersField.setAccessible(true);
-                modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-                isFinal = true;
-            }
-            if (Modifier.isStatic(field.getModifiers())) {
-                localObject = null;
-            } else {
-                localObject = object;
-            }
-            boolean fieldAccess = field.canAccess(localObject);
-            field.setAccessible(true);
-            result = field.get(localObject);
-            field.setAccessible(fieldAccess);
-
-            if (isFinal) {
-                modifiersField.setInt(field, field.getModifiers() & Modifier.FINAL);
-                modifiersField.setAccessible(finalFieldAccess);
-            }
-            return result;
-        }catch (Exception e) {
+            transformer = transformerFactory.newTransformer();
+        } catch (TransformerConfigurationException e) {
             throw new PersistenceException(e);
         }
+
     }
+
+    private void initXMLDocument() {
+        initXMLDocumentBuilder();
+        Element systemRoot = xmlDocument.createElement(PersistenceContext.XML_NODBPERSISTENCE);
+        xmlDocument.appendChild(systemRoot);
+        rootElement = xmlDocument.createElement(getRootXmlElementName());
+        systemRoot.appendChild(rootElement);
+        rootElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_NAME, persistedClass.getName());
+        Attr idGenAttr = xmlDocument.createAttribute(PersistenceContext.XML_ELEMENT_ID_GENERATOR);
+        idGenerator = new IdGenerator(idGenAttr);
+        rootElement.setAttributeNode(idGenAttr);
+
+    }
+
+    private void normalizeXMLModel() {
+        NodeList nodeList = rootElement.getChildNodes();
+        for (int i = 0; i < nodeList.getLength(); i++) {
+            Node node = nodeList.item(i);
+            if (node.getNodeType() != Node.ELEMENT_NODE) {
+                rootElement.removeChild(node);
+            }
+        }
+    }
+
+
 }

@@ -1,18 +1,24 @@
 package cz.vutbr.fit.nodbpersistence.core.listeners;
 
-import cz.vutbr.fit.nodbpersistence.annotations.ObjectId;
 import cz.vutbr.fit.nodbpersistence.core.PersistenceManager;
 import cz.vutbr.fit.nodbpersistence.core.events.LoadEntityEvent;
 import cz.vutbr.fit.nodbpersistence.core.klass.manager.AbstractClassManager;
-import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
 
+/**
+ * Load event listener.
+ */
 public class LoadEventListener extends AbstractEventListener {
 
-    public Object doLoad(LoadEntityEvent loadEvent) throws PersistenceException {
+    /**
+     * Processes load events and loads the object back to memory.
+     *
+     * @param loadEvent load event
+     * @return object to be loaded
+     */
+    public Object doLoad(LoadEntityEvent loadEvent) {
         PersistenceManager sourcePersistPersistenceManager = loadEvent.getSource();
         AbstractClassManager classManager = sourcePersistPersistenceManager.getContext().findClassManager(loadEvent.getLoadedClass());
         sourcePersistPersistenceManager.getContext().refreshAllStaticFields();
-        Object result = classManager.performLoad(loadEvent.getObjectId());
-        return result;
+        return classManager.performLoad(loadEvent.getObjectId());
     }
 }

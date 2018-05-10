@@ -10,12 +10,12 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import javax.xml.transform.TransformerException;
-import java.io.FileNotFoundException;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 
+/**
+ * Class manager for maps.
+ */
 public class MapManager extends AbstractClassManager {
 
     public static final String XML_ELEMENT_ROOT_MAP = "maps";
@@ -25,7 +25,7 @@ public class MapManager extends AbstractClassManager {
     public static final String XML_ELEMENT_MAP_KEY = "key";
     public static final String XML_ELEMENT_MAP_VALUE = "value";
 
-    public MapManager(PersistenceContext persistenceContext,  Class<?> persistedClass, boolean xmlFileExists, ClassFileHandler classFileHandler) {
+    public MapManager(PersistenceContext persistenceContext, Class<?> persistedClass, boolean xmlFileExists, ClassFileHandler classFileHandler) {
         super(persistenceContext, xmlFileExists, persistedClass, classFileHandler);
     }
 
@@ -65,40 +65,20 @@ public class MapManager extends AbstractClassManager {
         Element mapElement = getObjectNodeById(objectId);
         try {
             return loadMap(mapElement);
-        } catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException | IllegalAccessException | InstantiationException e) {
+        } catch (Exception e) {
             throw new PersistenceException(e);
         }
     }
 
-    @Override
-    public Long getObjectId(Object object) {
-        return null;
-    }
-
-    private void createXMLMap(Map map,Element parentField, PersistenceManager persistenceManager) {
-        for (Object key : map.keySet()) {
-            Element entryXmlElement = xmlDocument.createElement(XML_ELEMENT_MAP_ENTRY);
-            parentField.appendChild(entryXmlElement);
-            Object value = map.get(key);
-
-            createXMLField(entryXmlElement,key,XML_ELEMENT_MAP_KEY,persistenceManager);
-            createXMLField(entryXmlElement,value,XML_ELEMENT_MAP_VALUE,persistenceManager);
-        }
-    }
-
-    private void createXMLField(Element rootXmlElement,Object value, String xmlElementName,PersistenceManager persistenceManager) {
-        Element xmlElement = xmlDocument.createElement(xmlElementName);
-        rootXmlElement.appendChild(xmlElement);
-        if (value == null) {
-            xmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL, Boolean.TRUE.toString());
-            return;
-        }
-
-        createXMLStructure(xmlElement,value,persistenceManager);
-    }
-
+    /**
+     * Loads map from a given XML element
+     *
+     * @param node given XML node
+     * @return created map
+     * @throws Exception internal error
+     */
     @SuppressWarnings("unchecked")
-    public Object loadMap(Element node) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+    public Object loadMap(Element node) throws Exception {
         Class<?> collectionClass = Class.forName(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS));
         Constructor collectionConstructor = collectionClass.getConstructor();
         Map newMap = (Map) collectionConstructor.newInstance();
@@ -121,5 +101,28 @@ public class MapManager extends AbstractClassManager {
 
         return newMap;
     }
+
+    private void createXMLMap(Map map, Element parentField, PersistenceManager persistenceManager) {
+        for (Object key : map.keySet()) {
+            Element entryXmlElement = xmlDocument.createElement(XML_ELEMENT_MAP_ENTRY);
+            parentField.appendChild(entryXmlElement);
+            Object value = map.get(key);
+
+            createXMLField(entryXmlElement, key, XML_ELEMENT_MAP_KEY, persistenceManager);
+            createXMLField(entryXmlElement, value, XML_ELEMENT_MAP_VALUE, persistenceManager);
+        }
+    }
+
+    private void createXMLField(Element rootXmlElement, Object value, String xmlElementName, PersistenceManager persistenceManager) {
+        Element xmlElement = xmlDocument.createElement(xmlElementName);
+        rootXmlElement.appendChild(xmlElement);
+        if (value == null) {
+            xmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL, Boolean.TRUE.toString());
+            return;
+        }
+
+        createXMLStructure(xmlElement, value, persistenceManager);
+    }
+
 
 }

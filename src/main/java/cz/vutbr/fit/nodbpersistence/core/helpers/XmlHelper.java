@@ -1,19 +1,30 @@
 package cz.vutbr.fit.nodbpersistence.core.helpers;
 
-import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
-import org.w3c.dom.*;
+import org.w3c.dom.Attr;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
+/**
+ * Utility for actions with XML model.
+ */
 public class XmlHelper {
 
-    public static Element getChildByNameAndAttribute(Node parent, String elementName, String atributeName, String attributeValue) throws XmlException {
+    /**
+     * Method for getting an element from XML node with given tag name, its attribute and its value.
+     *
+     * @param parent         parent XML node
+     * @param elementName    element name
+     * @param attributeName  attribute name
+     * @param attributeValue attribute value
+     * @return first found element
+     * @throws XmlException if no element is found
+     */
+    public static Element getChildByNameAndAttribute(Node parent, String elementName, String attributeName, String attributeValue) throws XmlException {
         Node childNode = parent.getFirstChild();
         while (childNode != null) {
             if (childNode.getNodeType() != Node.ELEMENT_NODE) {
                 childNode = childNode.getNextSibling();
+                continue;
             }
             Element childElement = (Element) childNode;
             if (!childElement.getNodeName().equals(elementName)) {
@@ -21,35 +32,22 @@ public class XmlHelper {
                 continue;
             }
 
-            Attr attribute = childElement.getAttributeNode(atributeName);
+            Attr attribute = childElement.getAttributeNode(attributeName);
             if (attribute != null && attribute.getTextContent().equals(attributeValue)) {
                 return childElement;
             }
             childNode = childNode.getNextSibling();
         }
-        throw new XmlException("Attribute " + atributeName + " with value " +attributeValue + " in element " + elementName + " was not found.");
+        throw new XmlException("Attribute " + attributeName + " with value " + attributeValue + " in element " + elementName + " was not found.");
 
     }
 
-    public static Element getElementByAttribute(NodeList nodeList, String elementName, String atributeName, String attributeValue) throws PersistenceException, XmlException {
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            Node xmlField = nodeList.item(i);
-            if (xmlField.getNodeType() != Node.ELEMENT_NODE) {
-                continue;
-            }
-            Element xmlElementField = (Element) xmlField;
-            if (!xmlElementField.getNodeName().equals(elementName)) {
-                continue;
-            }
-
-            Attr attribute = xmlElementField.getAttributeNode(atributeName);
-            if (attribute != null && attribute.getTextContent().equals(attributeValue)) {
-                return xmlElementField;
-            }
-        }
-        throw new XmlException("Attribute " + atributeName + " with value " +attributeValue + " in element " + elementName + " was not found.");
-    }
-
+    /**
+     * Return next sibling of defined element.
+     *
+     * @param element original element
+     * @return original element's next sibling
+     */
     public static Element getNextElement(Element element) {
         Node node = element.getNextSibling();
         while (node != null) {
@@ -59,15 +57,5 @@ public class XmlHelper {
             node = node.getNextSibling();
         }
         return null;
-    }
-
-    public static void initXMLDocumentBuilder(DocumentBuilder documentBuilder, Document xmlDocument) {
-        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-        try {
-            documentBuilder = documentBuilderFactory.newDocumentBuilder();
-        } catch (ParserConfigurationException e) {
-            throw new PersistenceException(e);
-        }
-        xmlDocument = documentBuilder.newDocument();
     }
 }

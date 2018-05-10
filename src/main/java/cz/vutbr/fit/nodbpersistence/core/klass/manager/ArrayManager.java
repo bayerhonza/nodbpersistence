@@ -9,11 +9,11 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import javax.xml.transform.TransformerException;
-import java.io.FileNotFoundException;
 import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
 
+/**
+ * Class manager for arrays.
+ */
 public class ArrayManager extends AbstractClassManager {
 
     private final static String XML_ELEMENT_ARRAY_ROOT = "arrays";
@@ -21,7 +21,6 @@ public class ArrayManager extends AbstractClassManager {
     private final static String XML_ELEMENT_ARRAY_ITEM = "item";
 
     private final static String XML_ATTRIBUTE_SIZE = "size";
-    private final static String XML_ATTRIBUTE_INST_CLASS = "inst";
 
     public ArrayManager(PersistenceContext persistenceContext, boolean xmlFileExists, Class<?> persistedClass, ClassFileHandler classFileHandler) {
         super(persistenceContext, xmlFileExists, persistedClass, classFileHandler);
@@ -63,6 +62,33 @@ public class ArrayManager extends AbstractClassManager {
 
     }
 
+    /**
+     * Loads an array from a given element
+     *
+     * @param node element of array
+     * @return object of array
+     * @throws Exception internal error
+     */
+    public Object loadArray(Element node) throws Exception {
+        Class<?> instClass = Class.forName(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS)).getComponentType();
+        Long arrayId = Long.valueOf(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID));
+        Integer arraySize = Integer.valueOf(node.getAttribute(XML_ATTRIBUTE_SIZE));
+        Object newArray = Array.newInstance(instClass, arraySize);
+        NodeList items = node.getChildNodes();
+        Integer arrayIndex = 0;
+        for (int i = 0; i < items.getLength(); i++) {
+            if (items.item(i).getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
+            Element element = (Element) items.item(i);
+            Object result = loadObjectFromElement(element);
+            Array.set(newArray, arrayIndex++, result);
+        }
+        registerObject(newArray, arrayId);
+        return newArray;
+
+    }
+
     @Override
     public Object getObjectById(Long objectId) {
         if (idToObject.containsKey(objectId)) {
@@ -72,18 +98,9 @@ public class ArrayManager extends AbstractClassManager {
 
         try {
             return loadArray(arrayElement);
-        } catch (InstantiationException |
-                ClassNotFoundException |
-                InvocationTargetException |
-                NoSuchMethodException |
-                IllegalAccessException e) {
+        } catch (Exception e) {
             throw new PersistenceException(e);
         }
-    }
-
-    @Override
-    public Long getObjectId(Object object) {
-        return null;
     }
 
     private void createXMLArray(Object[] array, Element parentField, PersistenceManager persistenceManager) {
@@ -98,23 +115,5 @@ public class ArrayManager extends AbstractClassManager {
         }
     }
 
-    public Object loadArray(Element node) throws ClassNotFoundException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
-        Class<?> instClass = Class.forName(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS)).getComponentType();
-        Long arrayId = Long.valueOf(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID));
-        Integer arraySize = Integer.valueOf(node.getAttribute(XML_ATTRIBUTE_SIZE));
-        Object newArray = Array.newInstance(instClass,arraySize);
-        NodeList items = node.getChildNodes();
-        Integer arrayIndex = 0;
-        for (int i = 0; i < items.getLength(); i++) {
-            if (items.item(i).getNodeType() != Node.ELEMENT_NODE) {
-                continue;
-            }
-            Element element = (Element) items.item(i);
-            Object result = loadObjectFromElement(element);
-            Array.set(newArray, arrayIndex++, result);
-        }
-        registerObject(newArray,arrayId);
-        return newArray;
 
-    }
 }

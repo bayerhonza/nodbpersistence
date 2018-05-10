@@ -9,12 +9,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import javax.xml.transform.TransformerException;
-import java.io.FileNotFoundException;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
-import java.util.Map;
 
 public class CollectionManager extends AbstractClassManager {
 
@@ -66,31 +62,20 @@ public class CollectionManager extends AbstractClassManager {
         Element collectionElement = getObjectNodeById(objectId);
         try {
             return loadCollection(collectionElement);
-        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
+        } catch (Exception e) {
             throw new PersistenceException(e);
         }
     }
 
-    @Override
-    public Long getObjectId(Object object) {
-        return null;
-    }
-
-
-    private void createXMLCollection(Collection collection, Element parentField, PersistenceManager persistenceManager) {
-        for (Object o : collection) {
-            Element xmlItemElement = xmlDocument.createElement(XML_ELEMENT_COLLECTION_ITEM);
-            if (o == null) {
-                xmlItemElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL,Boolean.TRUE.toString());
-                continue;
-            }
-            parentField.appendChild(xmlItemElement);
-            createXMLStructure(xmlItemElement, o, persistenceManager);
-        }
-    }
-
+    /**
+     * Loads collection from a given node.
+     *
+     * @param node node with collection
+     * @return collection
+     * @throws Exception internal error
+     */
     @SuppressWarnings("unchecked")
-    public Object loadCollection(Element node) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+    public Object loadCollection(Element node) throws Exception {
         Class<?> collectionClass = Class.forName(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS));
         Constructor collectionConstructor = collectionClass.getConstructor();
         Collection newCollection = (Collection) collectionConstructor.newInstance();
@@ -105,5 +90,19 @@ public class CollectionManager extends AbstractClassManager {
         }
         return newCollection;
     }
+
+    private void createXMLCollection(Collection collection, Element parentField, PersistenceManager persistenceManager) {
+        for (Object o : collection) {
+            Element xmlItemElement = xmlDocument.createElement(XML_ELEMENT_COLLECTION_ITEM);
+            if (o == null) {
+                xmlItemElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL, Boolean.TRUE.toString());
+                continue;
+            }
+            parentField.appendChild(xmlItemElement);
+            createXMLStructure(xmlItemElement, o, persistenceManager);
+        }
+    }
+
+
 
 }

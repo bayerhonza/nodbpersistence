@@ -16,10 +16,20 @@ public class UpdateEntityEvent extends EntityEvent {
         this.klazz = klazz;
     }
 
+    /**
+     * Getter for objectId of desired object.
+     *
+     * @return objectId of desired object
+     */
     public Long getObjectId() {
         return objectId;
     }
 
+    /**
+     * Getter for desired class
+     *
+     * @return desired class
+     */
     public Class<?> getLoadedClass() {
         return klazz;
     }
