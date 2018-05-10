@@ -1,8 +1,6 @@
 package cz.vutbr.fit.nodbpersistence.core;
 
-import cz.vutbr.fit.nodbpersistence.annotations.ObjectId;
 import cz.vutbr.fit.nodbpersistence.core.events.EventTypeToListener;
-import cz.vutbr.fit.nodbpersistence.core.helpers.ClassHelper;
 import cz.vutbr.fit.nodbpersistence.core.klass.manager.*;
 import cz.vutbr.fit.nodbpersistence.core.listeners.AbstractEventListener;
 import cz.vutbr.fit.nodbpersistence.core.listeners.LoadEventListener;
@@ -13,7 +11,6 @@ import cz.vutbr.fit.nodbpersistence.core.storage.StorageContext;
 import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceCoreException;
 import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
 
-import javax.swing.text.Document;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,7 +24,7 @@ import java.util.Properties;
 public class PersistenceContext {
 
 
-    public static final String PATH_TO_CONFIG = "\\resources\\persistence-nodb.xml";
+    public static final String PATH_TO_CONFIG = "\\resources\\nodbpersistence.xml";
     public static final String XML_NODBPERSISTENCE = "nodbpersistence";
     public static final String ROOT_DIRECTORY_PROP = "rootDirectory";
 
@@ -55,8 +52,8 @@ public class PersistenceContext {
     private final Map<Class<?>, DefaultClassManagerImpl> classClassManagerMap = new HashMap<>();
 
     private CollectionManager collectionManager;
-    private  MapManager mapManager;
-    private  ArrayManager arrayManager;
+    private MapManager mapManager;
+    private ArrayManager arrayManager;
 
     /**
      * Constructor for PersistenceContext without predefined properties
@@ -79,18 +76,15 @@ public class PersistenceContext {
         }
     }
 
+    /**
+     * Finds listener to given event
+     *
+     * @param eventTypeToListener event type to listener object
+     * @param <T>                 listener class
+     * @return listener to event
+     */
     public <T extends AbstractEventListener> T getListenerToEvent(EventTypeToListener<T> eventTypeToListener) {
         return listeners.findListener(eventTypeToListener);
-    }
-
-    private void loadXMLProperties() throws PersistenceException {
-        try {
-            InputStream inputStream = new FileInputStream(Paths.get(PATH_TO_CONFIG).toFile());
-            properties.loadFromXML(inputStream);
-        } catch (IOException ex) {
-            throw new PersistenceException("Error while processing XML config file", ex);
-        }
-
     }
 
     /**
@@ -99,45 +93,58 @@ public class PersistenceContext {
      * @throws PersistenceCoreException if an internal error occurs
      */
     public void init() throws PersistenceCoreException {
+        // register all event listeners
         registerListeners();
+        // creates storage context
         initStorageContext(properties.getProperty(ROOT_DIRECTORY_PROP));
+        // scan of already exsiting class files
         HashMap<Class<?>, Path> listOfPresentClasses = storageContext.scanForPersistedClass();
         // class manager for collections
         if (!listOfPresentClasses.containsKey(collectionClass)) {
             ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(collectionClass.getName());
-            collectionManager = new CollectionManager(this,collectionClass,false,classFileHandler);
+            collectionManager = new CollectionManager(this, collectionClass, false, classFileHandler);
         } else {
             ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(collectionClass.getName());
-            collectionManager =  new CollectionManager(this, collectionClass,true, classFileHandler);
+            collectionManager = new CollectionManager(this, collectionClass, true, classFileHandler);
             listOfPresentClasses.remove(collectionClass);
         }
 
         // class manager for maps
         if (!listOfPresentClasses.containsKey(mapClass)) {
             ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(mapClass.getName());
-            mapManager = new MapManager(this,mapClass,false,classFileHandler);
-        }else {
+            mapManager = new MapManager(this, mapClass, false, classFileHandler);
+        } else {
             ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(mapClass.getName());
-            mapManager = new MapManager(this, mapClass,true, classFileHandler);
+            mapManager = new MapManager(this, mapClass, true, classFileHandler);
             listOfPresentClasses.remove(mapClass);
         }
 
         // class manager for arrays
         if (!listOfPresentClasses.containsKey(arrayClass)) {
             ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(arrayClass.getName());
-            arrayManager = new ArrayManager(this,false,arrayClass,classFileHandler);
+            arrayManager = new ArrayManager(this, false, arrayClass, classFileHandler);
         } else {
             ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(arrayClass.getName());
             arrayManager = new ArrayManager(this, true, arrayClass, classFileHandler);
             listOfPresentClasses.remove(arrayClass);
         }
 
+        // loads already existing class files
         loadClassManagers(listOfPresentClasses);
     }
 
+    /**
+     * Finds assigned class manager base on the object string reference. The reference is in form
+     * className#objectId
+     *
+     * @param reference reference of object
+     * @return class manager
+     * @throws ClassNotFoundException if an internal error occurs (reference contains non existing class)
+     */
     public AbstractClassManager findClassManager(String reference) throws ClassNotFoundException {
         String[] parsedReference = reference.split("#");
         String className = parsedReference[0];
+        // referenced class
         Class<?> referencedClass = Class.forName(className);
         return findClassManager(referencedClass);
     }
@@ -163,16 +170,40 @@ public class PersistenceContext {
         return classClassManagerMap.get(objectClass);
     }
 
+    /**
+     * Getter for array manager
+     *
+     * @return array manager
+     */
     public ArrayManager getArrayManager() {
         return this.arrayManager;
     }
 
+    /**
+     * Getter for map manager.
+     *
+     * @return map manager
+     */
     public MapManager getMapManager() {
         return this.mapManager;
     }
 
+    /**
+     * Getter for collection manager.
+     *
+     * @return collection manager
+     */
     public CollectionManager getCollectionManager() {
         return this.collectionManager;
+    }
+
+    private void loadXMLProperties() throws PersistenceException {
+        try {
+            InputStream inputStream = new FileInputStream(Paths.get(PATH_TO_CONFIG).toFile());
+            properties.loadFromXML(inputStream);
+        } catch (IOException ex) {
+            throw new PersistenceException("Error while processing XML config file", ex);
+        }
     }
 
 
@@ -182,12 +213,13 @@ public class PersistenceContext {
     }
 
     private void createClassManager(Class<?> objectClass) {
-        ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(objectClass.getCanonicalName());
+        ClassFileHandler classFileHandler = storageContext.createNewClassHandlerFile(objectClass.getName());
         DefaultClassManagerImpl classManager = new DefaultClassManagerImpl(this, objectClass, false, classFileHandler);
         classClassManagerMap.put(objectClass, classManager);
     }
 
     private void loadClassManagers(HashMap<Class<?>, Path> classes) {
+        // iterates over present class files nad restore the class managers' states
         classes.forEach((aClass, path) -> {
             ClassFileHandler classFileHandler = storageContext.createClassHandlerByPath(path);
             DefaultClassManagerImpl classManager = new DefaultClassManagerImpl(this, aClass, true, classFileHandler);
@@ -196,13 +228,9 @@ public class PersistenceContext {
     }
 
     private void registerListeners() {
-        listeners.registerListener(PersistEventListener.class,new PersistEventListener());
+        listeners.registerListener(PersistEventListener.class, new PersistEventListener());
         listeners.registerListener(UpdateEventListener.class, new UpdateEventListener());
         listeners.registerListener(LoadEventListener.class, new LoadEventListener());
-    }
-
-    public String getFullReference(Class<?> klazz, Long objectId) {
-        return klazz.getName() + "#" + objectId.toString();
     }
 
     public void refreshAllStaticFields() {

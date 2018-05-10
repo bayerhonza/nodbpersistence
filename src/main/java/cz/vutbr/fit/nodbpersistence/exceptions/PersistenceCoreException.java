@@ -1,5 +1,8 @@
 package cz.vutbr.fit.nodbpersistence.exceptions;
 
+/**
+ * Core exception of nodbpersistence.
+ */
 public class PersistenceCoreException extends Exception {
 
     public PersistenceCoreException(String msg) {

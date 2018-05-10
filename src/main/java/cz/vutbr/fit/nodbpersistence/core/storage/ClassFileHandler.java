@@ -7,7 +7,7 @@ import java.io.OutputStream;
 import java.nio.file.Path;
 
 /**
- * Class for files.
+ * Class for XML files.
  */
 public class ClassFileHandler {
 
@@ -17,10 +17,19 @@ public class ClassFileHandler {
         this.xmlClassFile = pathToFile.toFile();
     }
 
+    /**
+     * Creates output stream for the given file
+     * @return output stream
+     * @throws FileNotFoundException
+     */
     public OutputStream getXMLOutputStream() throws FileNotFoundException {
         return new FileOutputStream(xmlClassFile);
     }
 
+    /**
+     * Getter for file
+     * @return file
+     */
     public File getXmlClassFile() {
         return xmlClassFile;
     }

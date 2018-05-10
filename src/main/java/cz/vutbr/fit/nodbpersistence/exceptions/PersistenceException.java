@@ -1,10 +1,11 @@
 package cz.vutbr.fit.nodbpersistence.exceptions;
 
+/**
+ * Runtime exception of persistence.
+ */
 public class PersistenceException extends RuntimeException {
 
-    public PersistenceException() {
-
-    }
+    public PersistenceException() {}
 
     public PersistenceException(String msg) {
         super(msg);

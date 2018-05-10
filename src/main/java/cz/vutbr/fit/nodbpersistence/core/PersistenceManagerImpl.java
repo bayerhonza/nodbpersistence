@@ -23,10 +23,10 @@ public class PersistenceManagerImpl implements PersistenceManager {
     @ObjectId
     public Long objectId;
 
-    private final PersistenceManagerFactory pmfactory;
+    private final PersistenceManagerFactory pmFactory;
 
-    PersistenceManagerImpl(PersistenceManagerFactory pmfactory) {
-        this.pmfactory = pmfactory;
+    PersistenceManagerImpl(PersistenceManagerFactory pmFactory) {
+        this.pmFactory = pmFactory;
     }
 
     @Override
@@ -47,7 +47,7 @@ public class PersistenceManagerImpl implements PersistenceManager {
 
     @Override
     public PersistenceContext getContext() {
-        return pmfactory.getContext();
+        return pmFactory.getContext();
     }
 
     @Override
@@ -77,7 +77,7 @@ public class PersistenceManagerImpl implements PersistenceManager {
     }
 
     private PersistenceContext getPersistenceContext() {
-        return pmfactory.getContext();
+        return pmFactory.getContext();
     }
 
 }
