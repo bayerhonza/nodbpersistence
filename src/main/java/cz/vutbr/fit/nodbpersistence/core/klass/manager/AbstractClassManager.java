@@ -42,7 +42,7 @@ public abstract class AbstractClassManager {
     // map mapping object to its objectId.
     protected final IdentityHashMap<Object, Long> objectToId = new IdentityHashMap<>();
     // mapping objectId to its object
-    protected final IdentityHashMap<Long, Object> idToObject = new IdentityHashMap<>();
+    protected final HashMap<Long, Object> idToObject = new HashMap<>();
 
     // objectId generator
     IdGenerator idGenerator;
@@ -155,6 +155,9 @@ public abstract class AbstractClassManager {
      * @return loaded object
      */
     public Object performLoad(Long objectId) {
+        if (!idToElement.containsKey(objectId)) {
+            throw new PersistenceException("No object with objectId " + objectId + " found.");
+        }
         return getObjectById(objectId);
     }
 
@@ -307,9 +310,9 @@ public abstract class AbstractClassManager {
      *
      * @param element XML element
      * @return object included in the XML element
-     * @throws Exception if reflection fails
+     * @throws ReflectiveOperationException if reflection fails
      */
-    protected Object loadObjectFromElement(Element element) throws Exception {
+    protected Object loadObjectFromElement(Element element) throws ReflectiveOperationException {
         if (element.hasAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL)) {
             return null;
         }

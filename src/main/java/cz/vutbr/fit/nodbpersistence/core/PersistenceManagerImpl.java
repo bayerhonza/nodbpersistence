@@ -55,7 +55,8 @@ public class PersistenceManagerImpl implements PersistenceManager {
         this.classManagersToFlush.add(classManager);
     }
 
-    private void flushModifiedClassManagers() {
+    @Override
+    public void flush() {
         this.classManagersToFlush.forEach((AbstractClassManager::flushXMLDocument));
         this.classManagersToFlush.clear();
     }
@@ -63,7 +64,6 @@ public class PersistenceManagerImpl implements PersistenceManager {
     private void launchPersistAction(PersistEntityEvent event) throws PersistenceException {
         PersistEventListener eventListener = getPersistenceContext().getListenerToEvent(EventTypeToListener.PERSIST_EVENT);
         eventListener.doPersist(event);
-        flushModifiedClassManagers();
     }
 
     private Object launchLoadAction(LoadEntityEvent loadEntityEvent) throws PersistenceException {

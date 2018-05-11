@@ -72,10 +72,10 @@ public class CollectionManager extends AbstractClassManager {
      *
      * @param node node with collection
      * @return collection
-     * @throws Exception internal error
+     * @throws ReflectiveOperationException reflection error
      */
     @SuppressWarnings("unchecked")
-    public Object loadCollection(Element node) throws Exception {
+    public Object loadCollection(Element node) throws ReflectiveOperationException {
         Class<?> collectionClass = Class.forName(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS));
         Constructor collectionConstructor = collectionClass.getConstructor();
         Collection newCollection = (Collection) collectionConstructor.newInstance();

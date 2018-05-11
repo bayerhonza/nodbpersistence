@@ -1,7 +1,6 @@
 package cz.vutbr.fit.nodbpersistence.core;
 
 import cz.vutbr.fit.nodbpersistence.core.klass.manager.AbstractClassManager;
-import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
 
 /**
  * Interface for persistence manager
@@ -21,6 +20,11 @@ public interface PersistenceManager {
     void update(Object object) ;
 
     /**
+     * Flushes changes.
+     */
+    void flush();
+
+    /**
      * Loads object based on given objectId and return it as an instance of given class.
      * @param objectId objectId of object
      * @param klazz object's  class
@@ -37,7 +41,7 @@ public interface PersistenceManager {
 
     /**
      * Getter for persistence context.
-     * @return
+     * @return persistence context
      */
     PersistenceContext getContext();
 

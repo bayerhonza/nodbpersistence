@@ -24,7 +24,9 @@ public class Test1 {
 
     public Test1(String text) {
         this.text = text;
+    }
 
+    public Test1() {
     }
 
 

@@ -22,12 +22,13 @@ class HelloWorldNoDbPersistence2 {
         }
 
         PersistenceManager pm = persistenceManagerFactory.getPersistenceManager();
+        for (int i = 0; i < 100000; i++) {
+            Test3 test3 = new Test3(String.valueOf(i));
+            pm.persist(test3);
+        }
+        pm.flush();
 
-        Test3 test3 = new Test3("aaaaaa");
-        pm.persist(test3);
-
-        Test3 test_loaded = pm.load(1L, Test3.class);
-        pm.persist(test_loaded);
-        System.out.println(test_loaded.toString());
+        Test3 test3loaded = pm.load(999L, Test3.class);
+        System.out.println(test3loaded);
     }
 }

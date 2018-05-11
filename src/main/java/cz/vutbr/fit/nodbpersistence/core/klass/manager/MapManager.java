@@ -65,7 +65,7 @@ public class MapManager extends AbstractClassManager {
         Element mapElement = getObjectNodeById(objectId);
         try {
             return loadMap(mapElement);
-        } catch (Exception e) {
+        } catch (ReflectiveOperationException e) {
             throw new PersistenceException(e);
         }
     }
@@ -75,10 +75,10 @@ public class MapManager extends AbstractClassManager {
      *
      * @param node given XML node
      * @return created map
-     * @throws Exception internal error
+     * @throws ReflectiveOperationException reflection error
      */
     @SuppressWarnings("unchecked")
-    public Object loadMap(Element node) throws Exception {
+    public Object loadMap(Element node) throws ReflectiveOperationException {
         Class<?> collectionClass = Class.forName(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS));
         Constructor collectionConstructor = collectionClass.getConstructor();
         Map newMap = (Map) collectionConstructor.newInstance();

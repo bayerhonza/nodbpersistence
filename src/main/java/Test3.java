@@ -21,6 +21,10 @@ public class Test3 extends Test2 {
         super(string);
     }
 
+    public Test3() {
+        super();
+    }
+
 
     public Set<Test1> getListTest1() {
         return listTest1;

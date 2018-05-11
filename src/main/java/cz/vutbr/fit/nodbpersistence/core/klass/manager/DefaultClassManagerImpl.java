@@ -79,44 +79,53 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
 
     @Override
     public void persistObject(Object object, PersistenceManager persistenceManager) {
-        persistenceManager.addModifiedClassManager(this);
-        //System.out.println("persisting " + object.getClass().getName() + "#" + objectId);
-        Long objectId = getObjectId(object);
-        registerObject(object, objectId);
-        // top level XML element <object>
-        Element persistedObjectElement = xmlDocument.createElement(XML_ELEMENT_OBJECT);
-        rootElement.appendChild(persistedObjectElement);
-        //objectsInProgress.add(objectId);
+        try {
+            persistenceManager.addModifiedClassManager(this);
 
-        // attribute of top level XML element with objectId
-        persistedObjectElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID, objectId.toString());
+            //System.out.println("persisting " + object.getClass().getName() + "#" + objectId);
+            Long objectId = getObjectId(object);
+            registerObject(object, objectId);
+            // top level XML element <object>
+            Element persistedObjectElement = xmlDocument.createElement(XML_ELEMENT_OBJECT);
+            rootElement.appendChild(persistedObjectElement);
+            //objectsInProgress.add(objectId);
 
-        Field[] fields = object.getClass().getDeclaredFields();
-        Class<?> inheritedClass = object.getClass().getSuperclass();
+            // attribute of top level XML element with objectId
+            persistedObjectElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID, objectId.toString());
 
-        // create inherited class element
-        if (!inheritedClass.equals(Object.class)) {
-            // inheritance
-            Element inheritedXmlElement = xmlDocument.createElement(XML_ELEMENT_INHERITED);
-            persistedObjectElement.appendChild(inheritedXmlElement);
-            createInheritedClassXml(inheritedClass, inheritedXmlElement, object, persistenceManager);
+            Field[] fields = object.getClass().getDeclaredFields();
+            Class<?> inheritedClass = object.getClass().getSuperclass();
 
+            // create inherited class element
+            if (!inheritedClass.equals(Object.class)) {
+                // inheritance
+                Element inheritedXmlElement = xmlDocument.createElement(XML_ELEMENT_INHERITED);
+                persistedObjectElement.appendChild(inheritedXmlElement);
+                createInheritedClassXml(inheritedClass, inheritedXmlElement, object, persistenceManager);
+
+            }
+            createFieldsXML(fields, persistedObjectElement, object, persistenceManager);
+
+            //objectsInProgress.remove(objectId);
+            registerObject(object, objectId);
+            idToElement.put(objectId, persistedObjectElement);
+        } catch (ReflectiveOperationException e) {
+            throw new PersistenceException(e);
         }
-        createFieldsXML(fields, persistedObjectElement, object, persistenceManager);
-
-        //objectsInProgress.remove(objectId);
-        registerObject(object, objectId);
-        idToElement.put(objectId, persistedObjectElement);
     }
 
     @Override
-    public void performPersist(PersistEntityEvent persistEvent) throws PersistenceException {
-        Object persistedObject = persistEvent.getObject();
-        Long objectId = getObjectId(persistedObject);
-        if (isAlreadyPersisted(objectId)) {
-            updateObject(objectId, persistedObject);
-        } else {
-            persistObject(persistedObject, persistEvent.getSource());
+    public void performPersist(PersistEntityEvent persistEvent) {
+        try {
+            Object persistedObject = persistEvent.getObject();
+            Long objectId = getObjectId(persistedObject);
+            if (isAlreadyPersisted(objectId)) {
+                updateObject(objectId, persistedObject);
+            } else {
+                persistObject(persistedObject, persistEvent.getSource());
+            }
+        } catch (ReflectiveOperationException e) {
+            throw new PersistenceException(e);
         }
     }
 
@@ -145,7 +154,7 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
                 }
             }
 
-        } catch (Exception e) {
+        } catch (ReflectiveOperationException | XMLParseException e) {
             throw new PersistenceException(e);
         }
     }
@@ -206,7 +215,7 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
 
     }
 
-    private void addOrEditStatic(Field staticField, PersistenceManager persistenceManager) {
+    private void addOrEditStatic(Field staticField, PersistenceManager persistenceManager) throws ReflectiveOperationException {
         Element staticFieldXml;
         if (!staticElements.containsKey(staticField)) {
             staticFieldXml = xmlDocument.createElement(XML_ATTRIBUTE_FIELD);
@@ -230,7 +239,7 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
     private void createInheritedClassXml(Class<?> inheritedClass,
                                          Element rootElement,
                                          Object object,
-                                         PersistenceManager persistenceManager) {
+                                         PersistenceManager persistenceManager) throws ReflectiveOperationException {
 
         // get superclass fields
         Element inheritedClassXmlElement = xmlDocument.createElement(XML_ATTRIBUTE_INHERITED_CLASS);
@@ -242,13 +251,16 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
         inheritedClassXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_NAME, inheritedClass.getName());
         // create XML elements for superclass fields
         Field[] inheritedClassFields = inheritedClass.getDeclaredFields();
-        createFieldsXML(inheritedClassFields, inheritedClassXmlElement, object, persistenceManager);
+        Field[] nonStatic = Arrays.stream(inheritedClassFields)
+                .filter(field -> !Modifier.isStatic(field.getModifiers()))
+                .toArray(Field[]::new);
+        createFieldsXML(nonStatic, inheritedClassXmlElement, object, persistenceManager);
     }
 
     private void createFieldsXML(Field[] fields,
                                  Element objectXmlElement,
                                  Object object,
-                                 PersistenceManager persistenceManager) {
+                                 PersistenceManager persistenceManager) throws ReflectiveOperationException {
         for (Field field : fields) {
             if (field.isAnnotationPresent(ObjectId.class) || field.isAnnotationPresent(Transient.class)) {
                 continue;
@@ -271,7 +283,7 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
         }
     }
 
-    private Long getObjectId(Object object) throws PersistenceException {
+    private Long getObjectId(Object object) throws ReflectiveOperationException {
         Class<?> fieldType = objectIdField.getType();
         Long objectIdValue;
 
@@ -324,7 +336,7 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
         Object newObj;
         try {
             newObj = noArgConstructor.newInstance();
-        } catch (Exception e) {
+        } catch (ReflectiveOperationException e) {
             throw new PersistenceException(e);
         }
         Long objectId = Long.valueOf(objectElement.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID));
@@ -353,19 +365,17 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
             setFieldsValue(objectElement, classFields, newObj);
 
             return newObj;
-        } catch (XmlException e) {
+        } catch (XmlException | ReflectiveOperationException e) {
             throw new PersistenceException(e);
         }
     }
 
-    private void setObjectId(Object newObj, Element objectXmlElement) {
+    private void setObjectId(Object newObj, Element objectXmlElement) throws ReflectiveOperationException {
         try {
-            boolean accessibilityId = objectIdField.canAccess(newObj);
             objectIdField.setAccessible(true);
             Type typeId = objectIdField.getType();
             String idToString = objectXmlElement.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID);
-            objectIdField.set(newObj, ConvertStringToType.convertStringToType(typeId, idToString));
-            objectIdField.setAccessible(accessibilityId);
+            ClassHelper.setFieldValue(objectIdField, newObj, ConvertStringToType.convertStringToType(typeId, idToString));
         } catch (IllegalAccessException e) {
             throw new PersistenceException(e);
         }
@@ -377,8 +387,10 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
             Element nextSuperClassXmlElement = XmlHelper.getChildByNameAndAttribute(classXmlElement, XML_ATTRIBUTE_INHERITED_CLASS, PersistenceContext.XML_ATTRIBUTE_NAME, nextSuperclass.getName());
             setInheritedFields(nextSuperclass, newObj, nextSuperClassXmlElement);
         }
-        Field[] inheritedFields = inheritedClass.getDeclaredFields();
-        setFieldsValue(classXmlElement, inheritedFields, newObj);
+        Field[] nonStatic = Arrays.stream(inheritedClass.getDeclaredFields())
+                .filter(field -> !Modifier.isStatic(field.getModifiers()))
+                .toArray(Field[]::new);
+        setFieldsValue(classXmlElement, nonStatic, newObj);
     }
 
     private void setFieldsValue(Element parent, Field[] classFields, Object newObject) {
@@ -392,7 +404,7 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
                     continue;
                 }
                 Element fieldXmlElement = XmlHelper.getChildByNameAndAttribute(parent, XML_ATTRIBUTE_FIELD, PersistenceContext.XML_ATTRIBUTE_NAME, field.getName());
-                boolean accessibility = field.canAccess(newObject);
+                boolean accessibility = field.isAccessible();
                 field.setAccessible(true);
 
                 if (fieldXmlElement.hasAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL)) {

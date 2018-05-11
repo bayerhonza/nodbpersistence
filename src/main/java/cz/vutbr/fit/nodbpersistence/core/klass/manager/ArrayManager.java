@@ -67,9 +67,9 @@ public class ArrayManager extends AbstractClassManager {
      *
      * @param node element of array
      * @return object of array
-     * @throws Exception internal error
+     * @throws ReflectiveOperationException reflection error
      */
-    public Object loadArray(Element node) throws Exception {
+    public Object loadArray(Element node) throws ReflectiveOperationException {
         Class<?> instClass = Class.forName(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS)).getComponentType();
         Long arrayId = Long.valueOf(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID));
         Integer arraySize = Integer.valueOf(node.getAttribute(XML_ATTRIBUTE_SIZE));

@@ -1,7 +1,5 @@
 package cz.vutbr.fit.nodbpersistence.core.helpers;
 
-import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.URI;
@@ -56,14 +54,13 @@ public class ClassHelper {
         return clazz.equals(Double.class) || clazz.equals(double.class);
     }
 
-    public static void setFieldValue(Field field, Object object, Object newValue) {
-        try {
+    public static void setFieldValue(Field field, Object object, Object newValue) throws ReflectiveOperationException {
             boolean isFinal = false;
             boolean finalFieldAccess = false;
             Field modifiersField = Field.class.getDeclaredField("modifiers");
             Object localObject;
             if (Modifier.isFinal(field.getModifiers())) {
-                finalFieldAccess = modifiersField.canAccess(field);
+                finalFieldAccess = modifiersField.isAccessible();
                 modifiersField.setAccessible(true);
                 modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
                 isFinal = true;
@@ -73,29 +70,24 @@ public class ClassHelper {
             } else {
                 localObject = object;
             }
-            boolean fieldAccess = field.canAccess(localObject);
+        boolean fieldAccess = field.isAccessible();
             field.setAccessible(true);
             field.set(localObject, newValue);
-            field.setAccessible(fieldAccess);
-
             if (isFinal) {
                 modifiersField.setInt(field, field.getModifiers() & Modifier.FINAL);
                 modifiersField.setAccessible(finalFieldAccess);
             }
-        } catch (Exception e) {
-            throw new PersistenceException(e);
-        }
+        field.setAccessible(fieldAccess);
     }
 
-    public static Object getFieldValue(Field field, Object object) {
-        try {
+    public static Object getFieldValue(Field field, Object object) throws ReflectiveOperationException {
             Object result;
             boolean isFinal = false;
             boolean finalFieldAccess = false;
             Field modifiersField = Field.class.getDeclaredField("modifiers");
             Object localObject;
             if (Modifier.isFinal(field.getModifiers())) {
-                finalFieldAccess = modifiersField.canAccess(field);
+                finalFieldAccess = modifiersField.isAccessible();
                 modifiersField.setAccessible(true);
                 modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
                 isFinal = true;
@@ -105,7 +97,7 @@ public class ClassHelper {
             } else {
                 localObject = object;
             }
-            boolean fieldAccess = field.canAccess(localObject);
+        boolean fieldAccess = field.isAccessible();
             field.setAccessible(true);
             result = field.get(localObject);
             field.setAccessible(fieldAccess);
@@ -115,8 +107,5 @@ public class ClassHelper {
                 modifiersField.setAccessible(finalFieldAccess);
             }
             return result;
-        } catch (Exception e) {
-            throw new PersistenceException(e);
-        }
     }
 }

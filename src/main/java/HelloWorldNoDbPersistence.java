@@ -1,14 +1,7 @@
-import cz.vutbr.fit.nodbpersistence.core.PersistenceManager;
 import cz.vutbr.fit.nodbpersistence.core.PersistenceManagerFactory;
 import cz.vutbr.fit.nodbpersistence.core.PersistenceManagerFactoryBuilder;
 import cz.vutbr.fit.nodbpersistence.core.PersistenceSettings;
-import cz.vutbr.fit.nodbpersistence.core.helpers.ClassHelper;
 import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceCoreException;
-
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 class HelloWorldNoDbPersistence {
 
@@ -84,19 +77,7 @@ class HelloWorldNoDbPersistence {
 
         Test1 test1a = test11;*/
 
-        System.out.println(System.getProperty("java.vm.name"));
-        System.out.println(System.getProperty("java.home"));
-        System.out.println(System.getProperty("java.vendor"));
-        System.out.println(System.getProperty("java.version"));
-        System.out.println(System.getProperty("java.specification.vendor"));
 
-
-        List<Field> fields = new ArrayList<>();
-        Class<?> klazz = Test3.class;
-        while (klazz != Object.class) {
-            fields.addAll(Arrays.asList(klazz.getDeclaredFields()));
-            klazz = klazz.getSuperclass();
-        }
         /*fields.forEach(field -> {
             try {
                 field.setAccessible(true);

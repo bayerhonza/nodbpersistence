@@ -16,6 +16,10 @@ class Test2 extends Test1 {
         list.add(this);
     }
 
+    public Test2() {
+        super();
+    }
+
     public void setList(List<Test1> list) {
         this.list = list;
     }
