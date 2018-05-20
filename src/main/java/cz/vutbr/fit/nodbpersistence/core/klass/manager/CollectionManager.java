@@ -35,8 +35,8 @@ public class CollectionManager extends AbstractClassManager {
     }
 
     @Override
-    public void performPersist(PersistEntityEvent persistEntityEvent) {
-
+    public Long performPersist(PersistEntityEvent persistEntityEvent) {
+        return null;
     }
 
     @Override

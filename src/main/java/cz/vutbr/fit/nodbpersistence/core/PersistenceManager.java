@@ -11,7 +11,7 @@ public interface PersistenceManager {
      * Persists given object
      * @param object object
      */
-    void persist(Object object) ;
+    Long persist(Object object);
 
     /**
      * Updates given object.

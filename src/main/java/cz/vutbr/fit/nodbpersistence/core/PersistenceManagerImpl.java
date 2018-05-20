@@ -30,8 +30,8 @@ public class PersistenceManagerImpl implements PersistenceManager {
     }
 
     @Override
-    public void persist(Object ob) throws PersistenceException {
-        launchPersistAction(new PersistEntityEvent(ob, this));
+    public Long persist(Object ob) throws PersistenceException {
+        return launchPersistAction(new PersistEntityEvent(ob, this));
     }
 
     @Override
@@ -61,9 +61,9 @@ public class PersistenceManagerImpl implements PersistenceManager {
         this.classManagersToFlush.clear();
     }
 
-    private void launchPersistAction(PersistEntityEvent event) throws PersistenceException {
+    private Long launchPersistAction(PersistEntityEvent event) throws PersistenceException {
         PersistEventListener eventListener = getPersistenceContext().getListenerToEvent(EventTypeToListener.PERSIST_EVENT);
-        eventListener.doPersist(event);
+        return eventListener.doPersist(event);
     }
 
     private Object launchLoadAction(LoadEntityEvent loadEntityEvent) throws PersistenceException {

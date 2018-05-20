@@ -115,7 +115,7 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
     }
 
     @Override
-    public void performPersist(PersistEntityEvent persistEvent) {
+    public Long performPersist(PersistEntityEvent persistEvent) {
         try {
             Object persistedObject = persistEvent.getObject();
             Long objectId = getObjectId(persistedObject);
@@ -124,6 +124,7 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
             } else {
                 persistObject(persistedObject, persistEvent.getSource());
             }
+            return objectId;
         } catch (ReflectiveOperationException e) {
             throw new PersistenceException(e);
         }

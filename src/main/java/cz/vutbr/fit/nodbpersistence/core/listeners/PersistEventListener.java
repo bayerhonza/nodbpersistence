@@ -14,9 +14,9 @@ public class PersistEventListener extends AbstractEventListener {
      *
      * @param persistEvent persist event
      */
-    public void doPersist(PersistEntityEvent persistEvent) {
+    public Long doPersist(PersistEntityEvent persistEvent) {
         PersistenceManager sourcePersistPersistenceManager = persistEvent.getSource();
         AbstractClassManager classManager = sourcePersistPersistenceManager.getContext().findClassManager(persistEvent.getObject().getClass());
-        classManager.performPersist(persistEvent);
+        return classManager.performPersist(persistEvent);
     }
 }

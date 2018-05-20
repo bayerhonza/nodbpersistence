@@ -108,7 +108,7 @@ public abstract class AbstractClassManager {
      *
      * @param persistEntityEvent persist event
      */
-    public abstract void performPersist(PersistEntityEvent persistEntityEvent);
+    public abstract Long performPersist(PersistEntityEvent persistEntityEvent);
 
     /**
      * Persists given object in one persistence manager (source)
