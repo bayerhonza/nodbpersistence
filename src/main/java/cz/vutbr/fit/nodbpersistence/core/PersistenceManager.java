@@ -39,6 +39,8 @@ public interface PersistenceManager {
      */
     void addModifiedClassManager(AbstractClassManager classManager);
 
+    void emptyLoadCache();
+
     /**
      * Getter for persistence context.
      * @return persistence context

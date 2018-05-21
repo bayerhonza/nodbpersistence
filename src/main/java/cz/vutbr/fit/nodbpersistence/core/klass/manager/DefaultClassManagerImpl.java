@@ -11,6 +11,7 @@ import cz.vutbr.fit.nodbpersistence.core.helpers.XmlException;
 import cz.vutbr.fit.nodbpersistence.core.helpers.XmlHelper;
 import cz.vutbr.fit.nodbpersistence.core.storage.ClassFileHandler;
 import cz.vutbr.fit.nodbpersistence.core.storage.XMLParseException;
+import cz.vutbr.fit.nodbpersistence.exceptions.NoObjectIdFoundException;
 import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -82,9 +83,8 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
         try {
             persistenceManager.addModifiedClassManager(this);
 
-            //System.out.println("persisting " + object.getClass().getName() + "#" + objectId);
             Long objectId = getObjectId(object);
-            registerObject(object, objectId);
+            registerPersistedObject(object, objectId);
             // top level XML element <object>
             Element persistedObjectElement = xmlDocument.createElement(XML_ELEMENT_OBJECT);
             rootElement.appendChild(persistedObjectElement);
@@ -105,10 +105,7 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
 
             }
             createFieldsXML(fields, persistedObjectElement, object, persistenceManager);
-
-            //objectsInProgress.remove(objectId);
-            registerObject(object, objectId);
-            idToElement.put(objectId, persistedObjectElement);
+            assignIdToElement(objectId, persistedObjectElement);
         } catch (ReflectiveOperationException e) {
             throw new PersistenceException(e);
         }
@@ -326,8 +323,8 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
 
     @Override
     public Object getObjectById(Long objectId) {
-        if (idToObject.containsKey(objectId)) {
-            return idToObject.get(objectId);
+        if (loadCache.containsKey(objectId)) {
+            return loadCache.get(objectId);
         }
         Element objectElement = getObjectNodeById(objectId);
         return loadObject(objectElement);
@@ -341,7 +338,7 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
             throw new PersistenceException(e);
         }
         Long objectId = Long.valueOf(objectElement.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID));
-        registerObject(newObj, objectId);
+        registerLoadedObject(newObj, objectId);
         // setting of objectID
         try {
             setObjectId(newObj, objectElement);
@@ -461,7 +458,7 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
         if (objectIdFields.size() > 1) {
             throw new PersistenceException("Multiple ObjectId defined.");
         } else if (objectIdFields.size() == 0) {
-            throw new PersistenceException("No ObjectId defined in class " + persistedClass.getName() + ".");
+            throw new NoObjectIdFoundException("No ObjectId defined in class " + persistedClass.getName() + ".");
         } else {
             objectIdField = objectIdFields.get(0);
         }

@@ -22,17 +22,8 @@ public class StorageContext {
      * @param rootDirectory root directory for persistence
      */
     public StorageContext(Path rootDirectory) {
-        this(rootDirectory, false);
-
-    }
-
-    /**
-     * Constructor for restoring StorageContext object from defined directory
-     *
-     * @param rootDirectory Directory file of context to be restored
-     */
-    private StorageContext(Path rootDirectory, boolean restore) {
         this.rootDirectory = rootDirectory;
+
     }
 
     /**

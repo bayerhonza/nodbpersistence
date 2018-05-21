@@ -53,14 +53,16 @@ public class MapManager extends AbstractClassManager {
         mapXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID, mapId.toString());
         mapXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS, map.getClass().getName());
         createXMLMap(map, mapXmlElement, persistenceManager);
-        registerObject(map,mapId);
+
+        registerPersistedObject(map, mapId);
+        assignIdToElement(mapId, mapXmlElement);
 
     }
 
     @Override
     public Object getObjectById(Long objectId) {
-        if (idToObject.containsKey(objectId)) {
-            return idToObject.get(objectId);
+        if (loadCache.containsKey(objectId)) {
+            return loadCache.get(objectId);
         }
         Element mapElement = getObjectNodeById(objectId);
         try {
@@ -80,8 +82,10 @@ public class MapManager extends AbstractClassManager {
     @SuppressWarnings("unchecked")
     public Object loadMap(Element node) throws ReflectiveOperationException {
         Class<?> collectionClass = Class.forName(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS));
+        Long mapId = Long.valueOf(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID));
         Constructor collectionConstructor = collectionClass.getConstructor();
         Map newMap = (Map) collectionConstructor.newInstance();
+        registerLoadedObject(newMap, mapId);
 
         NodeList entries = node.getChildNodes();
         for (int i = 0; i < entries.getLength(); i++) {
@@ -98,7 +102,6 @@ public class MapManager extends AbstractClassManager {
             Object valueObject = loadObjectFromElement(valueElement);
             newMap.put(keyObject,valueObject);
         }
-
         return newMap;
     }
 

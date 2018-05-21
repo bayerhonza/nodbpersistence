@@ -1,0 +1,18 @@
+<!DOCTYPE nodbpersistence [
+        <!ELEMENT nodbpersistence (maps)*>
+        <!ELEMENT maps (map)*>
+        <!ATTLIST maps
+                id_gen CDATA #REQUIRED
+                name CDATA #REQUIRED>
+        <!ELEMENT map (entry)*>
+        <!ATTLIST map
+                id CDATA #REQUIRED
+                inst_class CDATA #REQUIRED>
+        <!ELEMENT entry (key|value)*>
+        <!ELEMENT key (#PCDATA)>
+        <!ATTLIST key
+                inst_class CDATA #REQUIRED>
+        <!ELEMENT value (#PCDATA)>
+        <!ATTLIST value
+                inst_class CDATA #REQUIRED>
+        ]>

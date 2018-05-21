@@ -52,6 +52,7 @@ class HelloWorldNoDbPersistence1 {
 
         pm.persist(test3);
         pm.persist(test31);
+        pm.flush();
 
 
         Test3 test_loaded = pm.load(1L, Test3.class);

@@ -2,26 +2,23 @@
 <project name="nodbpersistence">
     <property name="build.dir" value="build/"/>
     <property name="src.dir" value="src/"/>
-    <property name="lib.dir" value="lib/"/>
     <property name="dest.dir" value="dest/"/>
-
-    <path id="build.classpath">
-        <fileset dir = "${lib.dir}">
-            <include name="*.jar"/>
-        </fileset>
-    </path>
 
     <target name="build" description="Builds nodbpersistence project">
         <mkdir dir="${build.dir}"/>
         <mkdir dir="${dest.dir}"/>
 
-        <javac destdir="${build.dir}" source="1.9" target="1.9" includeantruntime="true">
+        <javac destdir="${build.dir}" source="1.8" target="1.8" includeantruntime="true">
             <src path="${src.dir}/main"/>
-            <classpath refid="build.classpath"/>
             <compilerarg value="-Xlint:unchecked"/>
         </javac>
-        <jar destfile="${dest.dir}/nodbpersistence.jar" filesetmanifest="skip">
-            <zipgroupfileset dir="${lib.dir}" includes="*.jar"/>
-        </jar>
+    </target>
+
+    <target name="package" depends="build" description="Creates JAR file">
+        <jar destfile="${dest.dir}/nodbpersistence-1.0.jar" basedir="${build.dir}"/>
+    </target>
+
+    <target name="clean" description="Clean build.">
+        <delete dir="${build.dir}"/>
     </target>
 </project>

@@ -45,16 +45,18 @@ public class CollectionManager extends AbstractClassManager {
     }
 
     @Override
-    public void persistObject(Object object, PersistenceManager persistenceManager) {
-        Collection collectionObject = (Collection) object;
+    public void persistObject(Object collection, PersistenceManager persistenceManager) {
+        Collection collectionObject = (Collection) collection;
         Element collectionXmlElement = xmlDocument.createElement(XML_ELEMENT_COLLECTION);
         rootElement.appendChild(collectionXmlElement);
         Long collectionId = idGenerator.getNextId();
+
+        registerPersistedObject(collectionObject, collectionId);
         collectionXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID, collectionId.toString());
         collectionXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS, collectionObject.getClass().getName());
 
         createXMLCollection(collectionObject, collectionXmlElement, persistenceManager);
-        registerObject(collectionObject, collectionId);
+        assignIdToElement(collectionId, collectionXmlElement);
     }
 
     @Override
@@ -77,8 +79,10 @@ public class CollectionManager extends AbstractClassManager {
     @SuppressWarnings("unchecked")
     public Object loadCollection(Element node) throws ReflectiveOperationException {
         Class<?> collectionClass = Class.forName(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS));
+        Long collectionId = Long.valueOf(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID));
         Constructor collectionConstructor = collectionClass.getConstructor();
         Collection newCollection = (Collection) collectionConstructor.newInstance();
+        registerLoadedObject(newCollection, collectionId);
         NodeList items = node.getChildNodes();
         for (int i = 0; i < items.getLength(); i++) {
             if (items.item(i).getNodeType() != Node.ELEMENT_NODE) {

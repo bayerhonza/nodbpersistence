@@ -1,0 +1,15 @@
+<!DOCTYPE nodbpersistence [
+        <!ELEMENT nodbpersistence (collections)*>
+        <!ELEMENT collections (collection)*>
+        <!ATTLIST collections
+                id_gen CDATA #REQUIRED
+                name CDATA #REQUIRED>
+        <!ELEMENT collection (item)*>
+        <!ATTLIST collection
+                id CDATA #REQUIRED
+                inst_class CDATA #REQUIRED>
+        <!ELEMENT item (#PCDATA)>
+        <!ATTLIST item
+                inst_class CDATA #IMPLIED
+                ref CDATA #IMPLIED>
+        ]>

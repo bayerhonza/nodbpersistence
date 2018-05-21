@@ -52,13 +52,15 @@ public class ArrayManager extends AbstractClassManager {
     public void persistObject(Object array, PersistenceManager persistenceManager) {
         Object[] arrayObject = (Object[]) array;
         Long arrayId = idGenerator.getNextId();
-        registerObject(array,arrayId);
         Element arrayXmlElement = xmlDocument.createElement(XML_ELEMENT_ARRAY);
         rootElement.appendChild(arrayXmlElement);
         arrayXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID, arrayId.toString());
         arrayXmlElement.setAttribute(XML_ATTRIBUTE_SIZE,Integer.valueOf(arrayObject.length).toString());
         arrayXmlElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS,array.getClass().getName());
         createXMLArray(arrayObject, arrayXmlElement, persistenceManager);
+
+        registerPersistedObject(array, arrayId);
+        assignIdToElement(arrayId, arrayXmlElement);
 
     }
 
@@ -84,15 +86,15 @@ public class ArrayManager extends AbstractClassManager {
             Object result = loadObjectFromElement(element);
             Array.set(newArray, arrayIndex++, result);
         }
-        registerObject(newArray, arrayId);
+        registerLoadedObject(newArray, arrayId);
         return newArray;
 
     }
 
     @Override
     public Object getObjectById(Long objectId) {
-        if (idToObject.containsKey(objectId)) {
-            return idToObject.get(objectId);
+        if (loadCache.containsKey(objectId)) {
+            return loadCache.get(objectId);
         }
         Element arrayElement = getObjectNodeById(objectId);
 

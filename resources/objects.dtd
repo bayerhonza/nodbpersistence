@@ -1,0 +1,16 @@
+<!DOCTYPE nodbpersistence [
+        <!ELEMENT nodbpersistence (arrays)*>
+        <!ELEMENT arrays (array)*>
+        <!ATTLIST arrays
+                id_gen CDATA #REQUIRED
+                name CDATA #REQUIRED>
+        <!ELEMENT array (item)*>
+        <!ATTLIST array
+                id CDATA #REQUIRED
+                inst_class CDATA #REQUIRED
+                size CDATA #REQUIRED>
+        <!ELEMENT item (#PCDATA)>
+        <!ATTLIST item
+                inst_class CDATA #IMPLIED
+                ref CDATA #IMPLIED>
+        ]>

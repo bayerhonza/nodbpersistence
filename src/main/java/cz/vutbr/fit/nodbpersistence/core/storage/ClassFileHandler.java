@@ -1,5 +1,7 @@
 package cz.vutbr.fit.nodbpersistence.core.storage;
 
+import cz.vutbr.fit.nodbpersistence.exceptions.PersistenceException;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -20,10 +22,14 @@ public class ClassFileHandler {
     /**
      * Creates output stream for the given file
      * @return output stream
-     * @throws FileNotFoundException
+     * @throws PersistenceException if file not found
      */
-    public OutputStream getXMLOutputStream() throws FileNotFoundException {
-        return new FileOutputStream(xmlClassFile);
+    public OutputStream getXMLOutputStream() {
+        try {
+            return new FileOutputStream(xmlClassFile);
+        } catch (FileNotFoundException e) {
+            throw new PersistenceException(e);
+        }
     }
 
     /**

@@ -15,13 +15,4 @@ public class ConvertStringToTypeTest {
         assertEquals(resultInt, Integer.valueOf(1));
     }
 
-    @Test
-    public void testConvertDouble() {
-        String value = "1.0";
-        double resultdouble = (int) ConvertStringToType.convertStringToType(int.class, value);
-        assertEquals(resultdouble, 1, 0.01);
-        Double resultDouble = (Double) ConvertStringToType.convertStringToType(Integer.class, value);
-        assertEquals(resultDouble, Double.valueOf(1));
-    }
-
 }

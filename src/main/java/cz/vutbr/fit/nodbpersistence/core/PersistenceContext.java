@@ -16,10 +16,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 public class PersistenceContext {
 
@@ -195,6 +192,15 @@ public class PersistenceContext {
      */
     public CollectionManager getCollectionManager() {
         return this.collectionManager;
+    }
+
+    public List<AbstractClassManager> getAllClassManagers() {
+        List<AbstractClassManager> classManagers = new ArrayList<>();
+        classManagers.add(arrayManager);
+        classManagers.add(mapManager);
+        classManagers.add(collectionManager);
+        classManagers.addAll(classClassManagerMap.values());
+        return classManagers;
     }
 
     private void loadXMLProperties() throws PersistenceException {

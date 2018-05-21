@@ -1,3 +1,4 @@
+import cz.vutbr.fit.nodbpersistence.core.PersistenceManager;
 import cz.vutbr.fit.nodbpersistence.core.PersistenceManagerFactory;
 import cz.vutbr.fit.nodbpersistence.core.PersistenceManagerFactoryBuilder;
 import cz.vutbr.fit.nodbpersistence.core.PersistenceSettings;
@@ -19,10 +20,11 @@ class HelloWorldNoDbPersistence {
             persistenceManagerFactory = builder.buildPersistenceManagerFactory();
         } catch (PersistenceCoreException ex) {
             ex.printStackTrace();
+            return;
         }
 
 
-        //PersistenceManager pm = persistenceManagerFactory.getPersistenceManager();
+        PersistenceManager pm = persistenceManagerFactory.getPersistenceManager();
 
         /*Test3 test3 = new Test3();
         Set<Test1> listTest1 = test3.getListTest1();

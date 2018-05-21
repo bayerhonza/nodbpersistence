@@ -21,8 +21,8 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPathFactory;
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -38,11 +38,12 @@ public abstract class AbstractClassManager {
     protected final Class<?> persistedClass;
 
     // map mapping objectId to its XML element
-    protected final HashMap<Long, Element> idToElement = new HashMap<>();
+    protected final HashMap<Long, Element> persistedIds = new HashMap<>();
     // map mapping object to its objectId.
-    protected final IdentityHashMap<Object, Long> objectToId = new IdentityHashMap<>();
+
+    protected final IdentityHashMap<Object, Long> persistCache = new IdentityHashMap<>();
     // mapping objectId to its object
-    protected final HashMap<Long, Object> idToObject = new HashMap<>();
+    protected final HashMap<Long, Object> loadCache = new HashMap<>();
 
     // objectId generator
     IdGenerator idGenerator;
@@ -83,7 +84,7 @@ public abstract class AbstractClassManager {
         if (!persistedClass.isAssignableFrom(object.getClass())) {
             throw new PersistenceException("Bad class manager.");
         }
-        if (!objectToId.containsKey(object)) {
+        if (!persistCache.containsKey(object)) {
             persistObject(object, persistenceManager);
         }
         return getFullReference(object);
@@ -139,13 +140,17 @@ public abstract class AbstractClassManager {
      * Flushes the modifications and writes XML file to disk.
      */
     public void flushXMLDocument() {
-        try {
+        try (OutputStream fos = fileHandler.getXMLOutputStream()) {
             DOMSource source = new DOMSource(xmlDocument);
-            StreamResult result = new StreamResult(fileHandler.getXMLOutputStream());
+            StreamResult result = new StreamResult(fos);
             transformer.transform(source, result);
-        } catch (FileNotFoundException | TransformerException e) {
+        } catch (IOException | TransformerException e) {
             throw new PersistenceException(e);
         }
+    }
+
+    public void cleanLoadCache() {
+        this.loadCache.clear();
     }
 
     /**
@@ -155,8 +160,8 @@ public abstract class AbstractClassManager {
      * @return loaded object
      */
     public Object performLoad(Long objectId) {
-        if (!idToElement.containsKey(objectId)) {
-            throw new PersistenceException("No object with objectId " + objectId + " found.");
+        if (!persistedIds.containsKey(objectId)) {
+            throw new PersistenceException("No object of class " + this.persistedClass.getCanonicalName() + " with objectId " + objectId + " found.");
         }
         return getObjectById(objectId);
     }
@@ -168,7 +173,7 @@ public abstract class AbstractClassManager {
      * @return true if present, false if not
      */
     public boolean isAlreadyPersisted(Long objectId) {
-        return idToElement.containsKey(objectId);
+        return persistedIds.containsKey(objectId);
     }
 
     /**
@@ -177,9 +182,18 @@ public abstract class AbstractClassManager {
      * @param object   object
      * @param objectId objectId of the object
      */
-    public void registerObject(Object object, Long objectId) {
-        this.idToObject.put(objectId, object);
-        this.objectToId.put(object, objectId);
+    public void registerPersistedObject(Object object, Long objectId) {
+        this.persistCache.put(object, objectId);
+    }
+
+    /**
+     * Register object as loaded.
+     *
+     * @param object   object
+     * @param objectId objectId of the object
+     */
+    public void registerLoadedObject(Object object, Long objectId) {
+        this.loadCache.put(objectId, object);
     }
 
     /**
@@ -189,7 +203,7 @@ public abstract class AbstractClassManager {
      * @return XML element with object
      */
     public Element getObjectNodeById(Long objectId) {
-        return idToElement.get(objectId);
+        return persistedIds.get(objectId);
     }
 
     /**
@@ -199,11 +213,21 @@ public abstract class AbstractClassManager {
      * @return reference as a string, {@code null} if object is not persisted
      */
     public String getFullReference(Object object) {
-        if (objectToId.containsKey(object)) {
-            return persistedClass.getName() + "#" + objectToId.get(object).toString();
+        if (persistCache.containsKey(object)) {
+            return persistedClass.getName() + "#" + persistCache.get(object).toString();
         } else {
             return null;
         }
+    }
+
+    /**
+     * Assigns objectId to XML element in inner model.
+     *
+     * @param objectId      objectId
+     * @param objectElement element in model
+     */
+    public void assignIdToElement(Long objectId, Element objectElement) {
+        persistedIds.put(objectId, objectElement);
     }
 
     /**
@@ -293,7 +317,7 @@ public abstract class AbstractClassManager {
                     if (idString.equals("")) {
                         throw new XMLParseException("No object Id present");
                     }
-                    idToElement.put(Long.parseLong(idString), element);
+                    persistedIds.put(Long.parseLong(idString), element);
 
                 }
             }

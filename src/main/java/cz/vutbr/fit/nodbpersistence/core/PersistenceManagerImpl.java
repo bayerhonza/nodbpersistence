@@ -56,6 +56,12 @@ public class PersistenceManagerImpl implements PersistenceManager {
     }
 
     @Override
+    public void emptyLoadCache() {
+        this.pmFactory.getContext().getAllClassManagers()
+                .forEach(AbstractClassManager::cleanLoadCache);
+    }
+
+    @Override
     public void flush() {
         this.classManagersToFlush.forEach((AbstractClassManager::flushXMLDocument));
         this.classManagersToFlush.clear();
