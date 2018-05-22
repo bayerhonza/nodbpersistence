@@ -160,7 +160,7 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
         try {
             return persistedClass.getConstructor();
         } catch (NoSuchMethodException e) {
-            throw new PersistenceException("No public constructor found for class " + persistedClass.getCanonicalName() + ".");
+            throw new PersistenceException("No public constructor found for class " + persistedClass.getCanonicalName() + ".", e);
         }
     }
 
