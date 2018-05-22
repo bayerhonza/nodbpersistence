@@ -24,7 +24,6 @@ import javax.xml.xpath.XPathExpressionException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.Type;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -371,7 +370,7 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
     private void setObjectId(Object newObj, Element objectXmlElement) throws ReflectiveOperationException {
         try {
             objectIdField.setAccessible(true);
-            Type typeId = objectIdField.getType();
+            Class typeId = objectIdField.getType();
             String idToString = objectXmlElement.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID);
             ClassHelper.setFieldValue(objectIdField, newObj, ConvertStringToType.convertStringToType(typeId, idToString));
         } catch (IllegalAccessException e) {
@@ -407,23 +406,10 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
 
                 if (fieldXmlElement.hasAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL)) {
                     field.set(newObject, null);
-                } else if (field.getType().isEnum()) {
-                    String fieldValue = fieldXmlElement.getTextContent();
-                    Object[] enumConstants = field.getType().getEnumConstants();
-                    boolean found = false;
-                    for (Object enumValue : enumConstants) {
-                        if (fieldValue.equals(enumValue.toString())) {
-                            field.set(newObject, enumValue);
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        throw new PersistenceException("Unknown value " + fieldValue + "of enum " + field.getType().getName());
-                    }
                 } else if (ClassHelper.isSimpleValueType(field.getType())) {
                     String fieldValue = fieldXmlElement.getTextContent();
-                    field.set(newObject, ConvertStringToType.convertStringToType(field.getType(), fieldValue));
+                    Class<?> fieldClass = Class.forName(fieldXmlElement.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS));
+                    field.set(newObject, ConvertStringToType.convertStringToType(fieldClass, fieldValue));
                 } else {
                     if (!fieldXmlElement.hasAttribute(PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE)) {
                         throw new PersistenceException("Bad XML. " + PersistenceContext.XML_ATTRIBUTE_FIELD_REFERENCE + " expected.");
@@ -444,7 +430,7 @@ public class DefaultClassManagerImpl extends AbstractClassManager {
                 }
                 field.setAccessible(accessibility);
             }
-        } catch (Exception e) {
+        } catch (ReflectiveOperationException | XmlException e) {
             throw new PersistenceException(e);
         }
     }

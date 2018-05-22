@@ -6,11 +6,12 @@ import java.net.URI;
 import java.util.Date;
 import java.util.Locale;
 
-public class Test3 {
+public class Test3SimpleTypes {
 
     @ObjectId
     private Long objectId;
 
+    private Test3Enum1 enum1;
     private CharSequence charSequence;
     private Number number;
     private Date date;
@@ -19,6 +20,14 @@ public class Test3 {
 
     public CharSequence getCharSequence() {
         return charSequence;
+    }
+
+    public Test3Enum1 getEnum1() {
+        return enum1;
+    }
+
+    public void setEnum1(Test3Enum1 enum1) {
+        this.enum1 = enum1;
     }
 
     public void setCharSequence(CharSequence charSequence) {

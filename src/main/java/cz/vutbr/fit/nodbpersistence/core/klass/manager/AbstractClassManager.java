@@ -23,10 +23,7 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Abstract class for class managers.
@@ -256,11 +253,15 @@ public abstract class AbstractClassManager {
     protected void createXMLStructure(Element xmlField, Object object, PersistenceManager persistenceManager) {
         if (object == null) { // null for all null value
             xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL, Boolean.TRUE.toString());
-        } else if (object.getClass().isEnum() || ClassHelper.isSimpleValueType(object.getClass())) { // if object type is enum, primitive or its wrapper
-            if (ClassHelper.isSimpleValueType(object.getClass())) {
-                xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS, object.getClass().getName());
+        } else if (ClassHelper.isSimpleValueType(object.getClass())) { // if object type is enum, primitive or its wrapper
+            String stringValue;
+            xmlField.setAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS, object.getClass().getName());
+            if (Date.class.isAssignableFrom(object.getClass())) {
+                stringValue = String.valueOf(((Date) object).toInstant().getEpochSecond());
+            } else {
+                stringValue = object.toString();
             }
-            xmlField.setTextContent(object.toString());
+            xmlField.setTextContent(stringValue);
         } else {
             AbstractClassManager classManager;
             if (object.getClass().isArray()) { // is array

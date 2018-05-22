@@ -67,16 +67,16 @@ public class ArrayManager extends AbstractClassManager {
     /**
      * Loads an array from a given element
      *
-     * @param node element of array
+     * @param arrayElement element of array
      * @return object of array
      * @throws ReflectiveOperationException reflection error
      */
-    public Object loadArray(Element node) throws ReflectiveOperationException {
-        Class<?> instClass = Class.forName(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS)).getComponentType();
-        Long arrayId = Long.valueOf(node.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID));
-        Integer arraySize = Integer.valueOf(node.getAttribute(XML_ATTRIBUTE_SIZE));
+    public Object loadArray(Element arrayElement) throws ReflectiveOperationException {
+        Class<?> instClass = Class.forName(arrayElement.getAttribute(PersistenceContext.XML_ATTRIBUTE_COLL_INST_CLASS)).getComponentType();
+        Long arrayId = Long.valueOf(arrayElement.getAttribute(PersistenceContext.XML_ATTRIBUTE_OBJECT_ID));
+        Integer arraySize = Integer.valueOf(arrayElement.getAttribute(XML_ATTRIBUTE_SIZE));
         Object newArray = Array.newInstance(instClass, arraySize);
-        NodeList items = node.getChildNodes();
+        NodeList items = arrayElement.getChildNodes();
         Integer arrayIndex = 0;
         for (int i = 0; i < items.getLength(); i++) {
             if (items.item(i).getNodeType() != Node.ELEMENT_NODE) {
@@ -100,7 +100,7 @@ public class ArrayManager extends AbstractClassManager {
 
         try {
             return loadArray(arrayElement);
-        } catch (Exception e) {
+        } catch (ReflectiveOperationException e) {
             throw new PersistenceException(e);
         }
     }
@@ -108,10 +108,6 @@ public class ArrayManager extends AbstractClassManager {
     private void createXMLArray(Object[] array, Element parentField, PersistenceManager persistenceManager) {
         for (Object o : array) {
             Element xmlItemElement = xmlDocument.createElement(XML_ELEMENT_ARRAY_ITEM);
-            if (o == null) {
-                xmlItemElement.setAttribute(PersistenceContext.XML_ATTRIBUTE_ISNULL,Boolean.TRUE.toString());
-                continue;
-            }
             parentField.appendChild(xmlItemElement);
             createXMLStructure(xmlItemElement,o,persistenceManager);
         }

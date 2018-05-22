@@ -61,6 +61,9 @@ public class CollectionManager extends AbstractClassManager {
 
     @Override
     public Object getObjectById(Long objectId) {
+        if (loadCache.containsKey(objectId)) {
+            return loadCache.get(objectId);
+        }
         Element collectionElement = getObjectNodeById(objectId);
         try {
             return loadCollection(collectionElement);
